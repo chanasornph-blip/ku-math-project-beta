@@ -54,6 +54,8 @@
                 <option value="2">นิสิตชั้นปีที่ 2</option>
                 <option value="3">นิสิตชั้นปีที่ 3</option>
                 <option value="4">นิสิตชั้นปีที่ 4</option>
+                <option value="5">นิสิตชั้นปีที่ 5</option>
+                <option value="6">นิสิตชั้นปีที่ 6</option>
               </select>
             </div>
 
@@ -208,6 +210,29 @@
             <label>🎯 เกรดเฉลี่ยสะสมเป้าหมายเมื่อสำเร็จการศึกษา (GPAX เป้าหมาย):</label>
             <input type="number" id="pref-target-gpax" step="0.05" min="2.00" max="4.00" value="3.25" onchange="resetDownstreamFromStep2()" style="font-size: 1.1rem; font-weight: bold; color: #006633;">
             <small style="color: #64748b; display: block; margin-top: 4px;">เกียรตินิยมอันดับ 1: 3.50 ขึ้นไป | เกียรตินิยมอันดับ 2: 3.25 ขึ้นไป | เกณฑ์จบขั้นต่ำ: 2.00</small>
+          </div>
+
+          <!-- ตัวเลือก Preference สไตล์การเรียนและการสอบ เพื่อนำไปจัดอันดับวิชาแนะนำ -->
+          <div class="add-course-grid" style="margin-top: 15px;">
+            <div class="form-group">
+              <label>🏫 รูปแบบการเรียนการสอนที่ต้องการเน้น:</label>
+              <select id="pref-online-rating" onchange="resetDownstreamFromStep2()">
+                <option value="ALL">-- ไม่จำกัด (แสดงทั้งหมด) --</option>
+                <option value="onsite">เน้น Onsite ในห้องเรียน 100%</option>
+                <option value="hybrid">เน้น Hybrid (มีทั้งในห้องและออนไลน์)</option>
+                <option value="online">เน้น Online 100%</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>📝 สัดส่วนคะแนนและการสอบที่ต้องการเน้น:</label>
+              <select id="pref-exam-rating" onchange="resetDownstreamFromStep2()">
+                <option value="ALL">-- ไม่จำกัด (แสดงทั้งหมด) --</option>
+                <option value="exam">เน้นสอบเป็นหลัก (มิดเทอม / ไฟนอล)</option>
+                <option value="hybrid">เน้นผสมผสาน (มีสอบ ร่วมกับงานกลุ่ม งานเดี่ยว หรือการบ้าน)</option>
+                <option value="work">เน้นเก็บคะแนนจากงาน/โปรเจกต์ (ไม่มีสอบหรือสอบน้อย)</option>
+              </select>
+            </div>
           </div>
 
           <div class="action-footer">
@@ -404,7 +429,7 @@
             </div>
 
             <div class="add-course-grid">
-              <!-- 🟢 ช่องเลือกชั้นปีที่กำลังศึกษาอยู่ -->
+              <!-- ช่องเลือกชั้นปีที่กำลังศึกษาอยู่ -->
               <div class="form-group">
                 <label>🎓 ชั้นปีที่กำลังศึกษาอยู่:</label>
                 <select id="review-user-year" required>
@@ -451,14 +476,13 @@
               <div class="form-group">
                 <label>สัดส่วนคะแนนและการสอบ:</label>
                 <select id="review-exam-rating">
-                  <option value="exam">เน้นสอบเป็นหลัก (มิดเทอม / ไฟนอล หนัก)</option>
-                  <option value="hybrid">ผสมผสาน (มีทั้งงานกลุ่ม งานเดี่ยว และสอบ)</option>
+                  <option value="exam">เน้นสอบเป็นหลัก (มิดเทอม / ไฟนอล)</option>
+                  <option value="hybrid">ผสมผสาน (มีสอบ ร่วมกับงานกลุ่ม งานเดี่ยว หรือการบ้าน)</option>
                   <option value="work">เน้นเก็บคะแนนจากงาน/โปรเจกต์ (ไม่มีสอบหรือสอบน้อย)</option>
                 </select>
               </div>
             </div>
 
-            <!-- 🟢 ปรับข้อความระบุภาคการศึกษาและแจ้งเตือนความจำเป็น -->
             <div class="form-group">
               <label>📅 ภาคการศึกษาที่เปิดสอน หรือ ภาคการศึกษาที่คุณลงเรียนจริง <span style="color: #dc2626;">* (จำเป็นต้องระบุอย่างน้อย 1 ภาค)</span>:</label>
               <div style="display:flex; gap:16px; margin-top:6px; flex-wrap: wrap;">

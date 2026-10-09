@@ -345,3 +345,43 @@ body {
 .accordion-content.open {
   display: block;
 }
+
+/* จัดแถวเพิ่มวิชาให้เป็นระเบียบ เท่ากันทุกช่อง และไม่ตกบรรทัด */
+div[style*="dashed"] > div {
+  display: grid !important;
+  grid-template-columns: minmax(200px, 1.2fr) minmax(220px, 1.8fr) auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* บังคับความสูงและหน้าตาของ Select ให้เท่ากันเป๊ะ */
+div[style*="dashed"] select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+  font-size: 0.95rem !important;
+}
+
+/* ปุ่มเพิ่มวิชาให้ความสูงเท่ากับ Select และตัวหนังสือไม่ตัดคำ */
+div[style*="dashed"] button {
+  height: 42px !important;
+  padding: 0 18px !important;
+  white-space: nowrap !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 600 !important;
+}
+
+/* หน้าจอมือถือให้เรียงแถวละ 1 ตัวเต็มจอ */
+@media (max-width: 768px) {
+  div[style*="dashed"] > div {
+    grid-template-columns: 1fr !important;
+  }
+}

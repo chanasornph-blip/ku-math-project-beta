@@ -118,14 +118,14 @@ let expectedCourseGrades = {};
 let maxExtraYears = 0;
 let allReviews = [];
 let maxUnlockedStep = 1;
+let termGeneratedSchedule = {};
 
 const GRADE_POINTS = { "A": 4.0, "B+": 3.5, "B": 3.0, "C+": 2.5, "C": 2.0, "D+": 1.5, "D": 1.0, "F": 0.0 };
 
-// 🟢 แถว ~90: ฟังก์ชันเริ่มระบบ
 function initApp() {
   onCurriculumChange();
-  onUserYearChange(); // 👈 สร้างตัวเลือกภาคการศึกษาตามชั้นปี
-  checkFreshmanLock(); // 👈 ตรวจสอบการล็อกการใส่เกรดกรณีปี 1 ยังไม่เริ่มเรียน
+  onUserYearChange();
+  checkFreshmanLock();
   onMainCategoryChange();
   populateReviewCourseDropdown();
   renderReviews();
@@ -184,6 +184,7 @@ function onCurriculumOrEngChange() {
   enabledSummerTerms = {};
   expectedCourseGrades = {};
   maxExtraYears = 0;
+  termGeneratedSchedule = {};
   renderAddedCoursesList();
 
   const curYearEl = document.getElementById("curriculum-year-select");
@@ -199,7 +200,6 @@ function onCurriculumChange() {
   onCurriculumOrEngChange();
 }
 
-// 🟢 แถว ~115: จัดการตัวเลือกภาคการศึกษาตามชั้นปี
 function onUserYearChange() {
   const yearSelect = document.getElementById("user-year-select");
   const semSelect = document.getElementById("user-semester-select");
@@ -225,7 +225,6 @@ function onUserYearChange() {
   resetDownstreamSteps();
 }
 
-// 🟢 แถว ~135: ล็อกการกรอกเกรด หากเป็นปี 1 ที่ยังไม่เริ่มเรียน
 function checkFreshmanLock() {
   const yearSelect = document.getElementById("user-year-select");
   const semSelect = document.getElementById("user-semester-select");
@@ -439,6 +438,28 @@ function checkUnpassedPrereqs(courseId, passedLookup) {
   return missingPrereqs;
 }
 
+// 🟢 รวมวิชาที่ผ่านแล้ว + วิชาที่ถูกจัดอยู่ในแผนของเทอมก่อนหน้า
+function getCumulativePassedMapBeforeTerm(targetTermKey) {
+  const map = { ...userGrades };
+
+  const match = targetTermKey.match(/Y(\d+)S(\d+)/);
+  if (!match) return map;
+  const targetY = parseInt(match[1]);
+  const targetS = parseInt(match[2]);
+
+  for (let y = 1; y <= 6; y++) {
+    for (let s = 1; s <= 3; s++) {
+      if (y > targetY || (y === targetY && s >= targetS)) return map;
+      const tKey = `Y${y}S${s}`;
+      const plannedList = termGeneratedSchedule[tKey] || [];
+      plannedList.forEach(cid => {
+        map[cid] = "P";
+      });
+    }
+  }
+  return map;
+}
+
 function addCourseToList() {
   const cat = document.getElementById("add-category-select").value;
   const grade = document.getElementById("add-grade-select").value;
@@ -589,11 +610,43 @@ function getCourseReviewGPA(courseId) {
   return getCourseReviewStats(courseId).avgGPA;
 }
 
+function getCoursePreferenceScore(courseId) {
+  const prefOnline = document.getElementById("pref-online-rating") ? document.getElementById("pref-online-rating").value : "ALL";
+  const prefExam = document.getElementById("pref-exam-rating") ? document.getElementById("pref-exam-rating").value : "ALL";
+
+  const normId = normalizeCourseId(courseId);
+  const reviews = allReviews.filter(r => normalizeCourseId(r.courseId) === normId);
+  if (reviews.length === 0) return { score: 0, matchRate: 0 };
+
+  let totalMatchPoints = 0;
+  let criteriaCount = 0;
+
+  if (prefOnline !== "ALL") criteriaCount++;
+  if (prefExam !== "ALL") criteriaCount++;
+
+  if (criteriaCount === 0) return { score: reviews.length, matchRate: 0 };
+
+  reviews.forEach(r => {
+    if (prefOnline !== "ALL" && r.onlineRating === prefOnline) totalMatchPoints++;
+    if (prefExam !== "ALL" && r.examRating === prefExam) totalMatchPoints++;
+  });
+
+  const maxPossible = reviews.length * criteriaCount;
+  const matchRate = maxPossible > 0 ? (totalMatchPoints / maxPossible) : 0;
+
+  return {
+    score: matchRate * 100,
+    matchRate: Math.round(matchRate * 100)
+  };
+}
+
 function sortRecommendedCourses(coursesList) {
   return coursesList.map(c => {
     const stats = getCourseReviewStats(c.id);
-    return { ...c, ...stats };
+    const pref = getCoursePreferenceScore(c.id);
+    return { ...c, ...stats, prefScore: pref.score };
   }).sort((a, b) => {
+    if (b.prefScore !== a.prefScore) return b.prefScore - a.prefScore;
     const hasRevA = a.revCount > 0 ? 1 : 0;
     const hasRevB = b.revCount > 0 ? 1 : 0;
     if (hasRevB !== hasRevA) return hasRevB - hasRevA;
@@ -759,8 +812,8 @@ function processRecommendations() {
   }
 
   renderCategoryRemainingSummary();
-  renderCategorizedRecommendations();
   renderRemainingTermsSchedule(currentYear, currentSem, Math.min(neededAvg, 4.0));
+  renderCategorizedRecommendations();
 }
 
 function renderCategoryRemainingSummary() {
@@ -785,6 +838,27 @@ function renderCategoryRemainingSummary() {
   });
 }
 
+function buildCourseReviewBadges(course, gradeLetter) {
+  const matchedReviews = (typeof allReviews !== "undefined" ? allReviews : []).filter(r => (r.courseId || "").toString().replace(/[^0-9]/g, "") === (course.id || "").toString().replace(/[^0-9]/g, ""));
+  const latestRev = matchedReviews.length > 0 ? matchedReviews[matchedReviews.length - 1] : null;
+
+  const onlineVal = (latestRev && latestRev.onlineRating) || course.onlineMode || "";
+  const examVal = (latestRev && latestRev.examRating) || course.examMode || "";
+
+  const onlineTag = onlineVal === 'onsite' ? '🏫 Onsite' : (onlineVal === 'online' ? '💻 Online' : (onlineVal === 'hybrid' ? '🔄 Hybrid' : '🏫 Onsite'));
+  const examTag = examVal === 'exam' ? '📝 เน้นสอบ' : (examVal === 'work' ? '📂 เน้นงาน' : (examVal === 'hybrid' ? '⚖️ สอบ+งาน' : '📝 เน้นสอบ'));
+  const diffLabel = (latestRev && latestRev.difficulty) || course.avgDiff || course.diffLabel || course.difficulty || 'ปานกลาง';
+
+  return `
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px;">
+      <span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">ระดับความยาก: ${diffLabel}</span>
+      <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">📚 เกรดเฉลี่ยรีวิว: ${gradeLetter}</span>
+      <span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">${onlineTag}</span>
+      <span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">${examTag}</span>
+    </div>
+  `;
+}
+
 function renderCategorizedRecommendations() {
   const stats = getCurriculumRemainingStats();
   const curYear = document.getElementById("curriculum-year-select") ? document.getElementById("curriculum-year-select").value : "2565";
@@ -807,15 +881,16 @@ function renderCategorizedRecommendations() {
     sortedPureCourses.forEach((c, idx) => {
       const missing = checkUnpassedPrereqs(c.id);
       const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
-      const revCountText = c.revCount > 0 ? `(${c.revCount} รีวิว)` : `(ยังไม่มีรีวิว)`;
       const gradeLetter = formatGradeLetter(c.avgGPA);
+      const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
+
       pureList.innerHTML += `
-        <li>
+        <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
           <b>อันดับ ${idx + 1}: ${c.id} ${c.name}</b> (${c.credits} หน่วยกิต)
-          <span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:6px; font-weight:bold;">ระดับความยาก: ${c.diffLabel} ${revCountText}</span>
-          <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:4px;">📊 เกรดเฉลี่ยรีวิว: ${gradeLetter}</span>
-          <br><small>เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
-        </li>`;
+          ${badgesHtml}
+          <small style="display:block; margin-top:4px;">เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
+        </li>
+      `;
     });
   }
 
@@ -837,15 +912,15 @@ function renderCategorizedRecommendations() {
     sortedAppliedCourses.forEach((c, idx) => {
       const missing = checkUnpassedPrereqs(c.id);
       const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
-      const revCountText = c.revCount > 0 ? `(${c.revCount} รีวิว)` : `(ยังไม่มีรีวิว)`;
       const gradeLetter = formatGradeLetter(c.avgGPA);
       const rule200Badge = c.isLevel200 ? `<span style="background:#f3e8ff; color:#7e22ce; padding:2px 6px; border-radius:4px; font-size:0.78rem; margin-left:4px;">📌 รหัส 200 (นับได้ตัวเดียว)</span>` : "";
+      const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
+
       appliedList.innerHTML += `
-        <li>
+        <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
           <b>อันดับ ${idx + 1}: ${c.id} ${c.name}</b> (${c.credits} หน่วยกิต) ${rule200Badge}
-          <span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:6px; font-weight:bold;">ระดับความยาก: ${c.diffLabel} ${revCountText}</span>
-          <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.8rem; margin-left:4px;">📊 เกรดเฉลี่ยรีวิว: ${gradeLetter}</span>
-          <br><small>เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
+          ${badgesHtml}
+          <small style="display:block; margin-top:4px;">เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
         </li>`;
     });
   }
@@ -879,10 +954,14 @@ function renderCategorizedRecommendations() {
         basicEng.forEach(c => {
           const missing = checkUnpassedPrereqs(c.id);
           const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
+          const gradeLetter = formatGradeLetter(c.avgGPA);
+          const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
+
           engList.innerHTML += `
-            <li style="margin-left: 15px;">
+            <li style="margin-left: 15px; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
               <b>• ${c.id} ${c.name}</b> (${c.credits} หน่วยกิต)
-              <br><small>เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
+              ${badgesHtml}
+              <small style="display:block; margin-top:4px;">เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
             </li>`;
         });
       }
@@ -897,15 +976,14 @@ function renderCategorizedRecommendations() {
       sortedAdvEng.forEach((c, idx) => {
         const missing = checkUnpassedPrereqs(c.id);
         const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
-        const revCountText = c.revCount > 0 ? `(${c.revCount} รีวิว)` : `(ยังไม่มีรีวิว)`;
         const gradeLetter = formatGradeLetter(c.avgGPA);
+        const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
 
         engList.innerHTML += `
-          <li style="margin-left: 15px;">
+          <li style="margin-left: 15px; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
             <b>อันดับ ${idx + 1}: ${c.id} ${c.name}</b> (${c.credits} หน่วยกิต)
-            <span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:4px; font-size:0.78rem;">ระดับความยาก: ${c.diffLabel} ${revCountText}</span>
-            <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.78rem;">📊 รีวิว: ${gradeLetter}</span>
-            <br><small>เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
+            ${badgesHtml}
+            <small style="display:block; margin-top:4px;">เปิดสอน: <b>${c.offeredStr}</b> | ${prereqText}</small>
           </li>`;
       });
     }
@@ -938,13 +1016,13 @@ function renderCategorizedRecommendations() {
         </li>`;
 
       sortedGE.forEach((c) => {
-        const revCountText = c.revCount > 0 ? `(${c.revCount} รีวิว)` : `(ยังไม่มีรีวิว)`;
         const gradeLetter = formatGradeLetter(c.avgGPA);
+        const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
+
         extraList.innerHTML += `
-          <li style="margin-left: 15px;">
+          <li style="margin-left: 15px; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
             <b>• ${c.id} ${c.name}</b> (${c.credits} หน่วยกิต)
-            <span style="background:#fef08a; color:#854d0e; padding:2px 8px; border-radius:4px; font-size:0.78rem;">ระดับความยาก: ${c.diffLabel} ${revCountText}</span>
-            <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.78rem;">📊 รีวิว: ${gradeLetter}</span>
+            ${badgesHtml}
           </li>`;
       });
     });
@@ -958,6 +1036,27 @@ function addCustomCourseToTerm(termKey, courseId) {
   if (termCustomCourses[termKey].includes(courseId)) {
     alert("วิชานี้ถูกเลือกในเทอมนี้แล้วครับ");
     return;
+  }
+
+  // 🟢 ตรวจสอบเงื่อนไขการลง ENG ในเทอมเดียวกัน
+  const targetCourse = COURSE_DATABASE.find(c => c.id === courseId);
+  if (targetCourse && targetCourse.type === "eng") {
+    const existingTermCourseIds = [
+      ...(termGeneratedSchedule[termKey] || []),
+      ...(termCustomCourses[termKey] || [])
+    ];
+
+    for (let cid of existingTermCourseIds) {
+      const existCourse = COURSE_DATABASE.find(c => c.id === cid);
+      if (existCourse && existCourse.type === "eng") {
+        // อนุญาตเฉพาะกรณีที่ทั้งคู่เป็น eng_adv (ENG 3 หรือ ENG 4) เท่านั้น
+        const bothAdv = (existCourse.subType === "eng_adv" && targetCourse.subType === "eng_adv");
+        if (!bothAdv) {
+          alert(`⚠️ ไม่สามารถลงวิชาภาษาอังกฤษนี้ในเทอมเดียวกันได้!\n\nหลักสูตรไม่อนุญาตให้ลง ENG 1 หรือ ENG 2 ซ้อนกับวิชา ENG อื่นในภาคการศึกษาเดียวกัน (อนุญาตเฉพาะกลุ่มวิชา ENG 3 และ ENG 4 เท่านั้นที่สามารถลงคู่กันได้ครับ)`);
+          return;
+        }
+      }
+    }
   }
 
   termCustomCourses[termKey].push(courseId);
@@ -1001,6 +1100,7 @@ function updateExpectedGrade(courseId, gradeVal) {
   processRecommendations();
 }
 
+// 🟢 ตัวกรองรายวิชาในกล่องเพิ่มวิชารายเทอม — กรองวิชาที่เคยเรียน/เคยลงในเทอมก่อนหน้าออกทันที
 function onTermCategoryChange(termKey, selectedCategory) {
   const courseDropdown = document.getElementById(`course-select-${termKey}`);
   if (!courseDropdown) return;
@@ -1012,6 +1112,12 @@ function onTermCategoryChange(termKey, selectedCategory) {
     return;
   }
 
+  const cumulativePassedMap = getCumulativePassedMapBeforeTerm(termKey);
+  const currentTermCourses = [
+    ...(termGeneratedSchedule[termKey] || []),
+    ...(termCustomCourses[termKey] || [])
+  ];
+
   let filtered = [];
   if (selectedCategory === "pure" || selectedCategory === "applied" || selectedCategory === "eng") {
     filtered = COURSE_DATABASE.filter(c => c.type === selectedCategory);
@@ -1019,11 +1125,25 @@ function onTermCategoryChange(termKey, selectedCategory) {
     filtered = COURSE_DATABASE.filter(c => c.subType === selectedCategory);
   }
 
+  // 🟢 กรองวิชาที่ผ่านแล้ว หรือถูกจัดลงในเทอมก่อนหน้า หรืออยู่ในเทอมปัจจุบันออกทั้งหมด (ป้องกันการเลือกซ้ำ)
+  filtered = filtered.filter(c => {
+    const isPassedEarlier = cumulativePassedMap[c.id] && cumulativePassedMap[c.id] !== "F";
+    const isInCurrentTerm = currentTermCourses.includes(c.id);
+    return !isPassedEarlier && !isInCurrentTerm;
+  });
+
   const sortedList = sortRecommendedCourses(filtered);
 
   courseDropdown.innerHTML = `<option value="">-- เลือกวิชาในหมวดนี้ --</option>`;
+
+  if (sortedList.length === 0) {
+    courseDropdown.innerHTML = `<option value="">-- คุณลงเรียนวิชาในหมวดนี้ครบแล้ว --</option>`;
+    courseDropdown.disabled = true;
+    return;
+  }
+
   sortedList.forEach(c => {
-    const missing = checkUnpassedPrereqs(c.id);
+    const missing = checkUnpassedPrereqs(c.id, cumulativePassedMap);
     const revNote = c.revCount > 0 ? `(ง่าย: ${c.easyCount}/${c.revCount})` : "";
     if (missing.length === 0) {
       courseDropdown.innerHTML += `<option value="${c.id}">${c.id} ${c.name} (${c.credits} หน่วยกิต) [${c.diffLabel} ${revNote}]</option>`;
@@ -1083,7 +1203,6 @@ function calculateDynamicTargetRange(targetAvg) {
   return "D – A";
 }
 
-// 🟢 แถว ~700: ตารางแผนรายเทอม + ปุ่ม Summer ปี 6
 function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
   const container = document.getElementById("remaining-terms-schedule");
   if (!container) return;
@@ -1104,6 +1223,7 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
   });
 
   let passedMap = { ...userGrades };
+  termGeneratedSchedule = {};
   
   let currentY = startYear;
   let currentS = 1;
@@ -1164,11 +1284,11 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
     let isSummerTerm = (currentS === 3);
 
-    // 🟢 ตรวจสอบเงื่อนไขตัดจบลูปอย่างแม่นยำ (รองรับถึง Summer ปี 6)
     if (currentY > maxYearAllowed) break;
     if (currentY === maxYearAllowed && currentS > (enabledSummerTerms[`Y${maxYearAllowed}S3`] ? 3 : 2)) break;
 
     let termKey = `Y${currentY}S${currentS}`;
+    termGeneratedSchedule[termKey] = [];
     let termCourses = [];
     let remainingAfterTerm = [];
 
@@ -1210,7 +1330,10 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
       }
     }
 
-    termCourses.forEach(c => { passedMap[c.id] = "P"; });
+    termCourses.forEach(c => { 
+      passedMap[c.id] = "P"; 
+      termGeneratedSchedule[termKey].push(c.id);
+    });
 
     let customSelectedInThisTerm = termCustomCourses[termKey] || [];
     let customCourseObjects = [];
@@ -1220,6 +1343,7 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
         customCourseObjects.push(c);
         currentTermCreditSum += c.credits;
         passedMap[c.id] = "P";
+        termGeneratedSchedule[termKey].push(c.id);
       }
     });
 
@@ -1365,7 +1489,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
     if (remainingCreditQuota > 0) {
       let isEarlyYear = (currentY === 1 && !isSummerTerm);
-      let adviceBoxHtml = "";
 
       let suggestedCategories = [];
       if (currentStats.pure.earned < 9 && currentY >= 2) suggestedCategories.push("วิชาเลือก Pure Math");
@@ -1376,30 +1499,33 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
       });
 
       const nextEngTarget = getNextRecommendedEngFlow(passedMap);
-      let engAdvice = "";
-      if (nextEngTarget) {
-        engAdvice = `🇬🇧 แนะนำให้ลง <b>[${nextEngTarget}]</b> ในเทอมนี้ตามแผนหลักสูตร`;
-      }
+
+      // 🟢 จัดรูปแบบกล่องคำแนะนำให้อ่านง่าย เป็นสัดส่วน ชัดเจน
+      let adviceLines = [];
 
       if (isSummerTerm) {
-        adviceBoxHtml = `<div style="margin-top: 8px; font-size: 0.88rem; color: #92400e; background: #fef3c7; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
-          ☀️ <b>คำแนะนำสำหรับ Summer:</b> เหมาะสำหรับลงเก็บ <b>วิชาศึกษาทั่วไป (GE) หรือวิชาเลือกเสรี</b> เพื่อแบ่งเบาภาระในเทอมปกติ หรือใช้เก็บเกรด A ดึงเกรดเฉลี่ยสะสม (GPAX) ขึ้น
-        </div>`;
-      } else if (isEarlyYear) {
-        adviceBoxHtml = `<div style="margin-top: 8px; font-size: 0.88rem; color: #1e40af; background: #eff6ff; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
-          💡 <b>คำแนะนำสำหรับเทอมนี้:</b> ${engAdvice ? engAdvice + " และ" : ""} ในชั้นปีที่ 1 แนะนำให้เลือกเก็บ <b>วิชาศึกษาทั่วไป (GE) / เสรี</b> เพื่อสะสมหน่วยกิตให้ครบตามโครงสร้างหลักสูตร
-        </div>`;
+        adviceLines.push(`☀️ <b>เป้าหมายหลัก:</b> เหมาะสำหรับเก็บวิชาศึกษาทั่วไป (GE) หรือวิชาเลือกเสรี เพื่อแบ่งเบาภาระในเทอมปกติ หรือเก็บเกรด A ดึง GPAX`);
       } else {
-        if (suggestedCategories.length > 0 || engAdvice) {
-          adviceBoxHtml = `<div style="margin-top: 8px; font-size: 0.88rem; color: #6b21a8; background: #faf5ff; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #a855f7;">
-            💡 <b>คำแนะนำสำหรับเทอมนี้:</b> ${engAdvice ? engAdvice + " | " : ""} แนะนำให้ลงวิชาในหมวด <b>[ ${suggestedCategories.slice(0, 2).join(" หรือ ")} ]</b> เพื่อเติมเต็มเกณฑ์ที่ยังขาด
-          </div>`;
+        if (nextEngTarget) {
+          adviceLines.push(`🇬🇧 <b>วิชาภาษาอังกฤษ:</b> แนะนำให้ลง <b>${nextEngTarget}</b> ในเทอมนี้ตามขั้นตอน`);
+        }
+        if (isEarlyYear) {
+          adviceLines.push(`🌿 <b>หมวดวิชาศึกษาทั่วไป:</b> ในชั้นปีที่ 1 แนะนำเก็บกลุ่ม <b>GE และวิชาเลือกเสรี</b> ให้ครบหน่วยกิต`);
+        } else if (suggestedCategories.length > 0) {
+          adviceLines.push(`🎯 <b>หมวดวิชาแนะนำเพิ่มเติม:</b> แนะนำลงวิชาในกลุ่ม <b>${suggestedCategories.slice(0, 2).join(" หรือ ")}</b>`);
         } else {
-          adviceBoxHtml = `<div style="margin-top: 8px; font-size: 0.88rem; color: #15803d; background: #f0fdf4; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #22c55e;">
-            🎉 <b>ยอดเยี่ยม:</b> หมวดบังคับ, ENG และ GE ครบแล้ว สามารถเลือกลงวิชาเสรีใดก็ได้ตามความสนใจ
-          </div>`;
+          adviceLines.push(`🎉 <b>หมวดบังคับและ GE ครบแล้ว:</b> สามารถเลือกลงวิชาเลือกเสรีใดก็ได้ตามความสนใจ`);
         }
       }
+
+      let adviceBoxHtml = `
+        <div style="margin-top: 10px; font-size: 0.88rem; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #e9d5ff;">
+          <b style="color: #6b21a8; display: block; margin-bottom: 4px;">💡 ข้อแนะนำการจัดตารางในเทอมนี้:</b>
+          <ul style="margin: 0; padding-left: 20px; color: #475569; line-height: 1.6;">
+            ${adviceLines.map(line => `<li>${line}</li>`).join("")}
+          </ul>
+        </div>
+      `;
 
       let categoryOptionsHtml = `<option value="">-- เลือกหัวข้อหมวดวิชา --</option>`;
 
@@ -1464,7 +1590,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
       </div>
     </div>`;
 
-    // 🟢 ปุ่มแทรก Summer หลังเทอม 2 ทุกปี (รองรับถึงปี 6)
     if (currentS === 2) {
       const summerKey = `Y${currentY}S3`;
       const isSummerActive = !!enabledSummerTerms[summerKey];
@@ -1480,7 +1605,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
     container.innerHTML += termHtml;
     unpassedCourses = remainingAfterTerm;
 
-    // ลำดับการเลื่อนเทอม
     if (currentS === 1) {
       currentS = 2;
     } else if (currentS === 2) {
@@ -1497,7 +1621,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
     }
   }
 
-  // 🟢 ปุ่มขยายชั้นปี (ปี 5, ปี 6) ที่ท้ายตาราง
   if (maxExtraYears < 2) {
     container.innerHTML += `
       <div style="text-align: center; margin: 20px 0;">
@@ -1636,20 +1759,17 @@ function submitReview(event) {
   const commentText = commentInput ? commentInput.value.trim() : "";
   const checkboxes = document.querySelectorAll('input[name="offered_semesters"]:checked');
 
-  // 1. ดักเตือนถ้ายังไม่พิมพ์รีวิว
   if (!commentText) {
     alert("⚠️ กรุณาระบุข้อความรีวิวก่อนส่งครับ");
     if (commentInput) commentInput.focus();
     return;
   }
 
-  // 2. ดักเตือนถ้ายังไม่ติ๊กเลือกเทอม
   if (checkboxes.length === 0) {
     alert("⚠️ กรุณาเลือกภาคการศึกษาที่เปิดสอน/ลงเรียน อย่างน้อย 1 ภาคครับ");
     return;
   }
 
-  // 3. ป๊อปอัปถามยืนยัน
   const isConfirm = confirm("คุณต้องการยืนยันการส่งรีวิวนี้ใช่หรือไม่?");
   if (!isConfirm) return;
 
