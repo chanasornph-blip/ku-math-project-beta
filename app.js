@@ -403,6 +403,7 @@ function filterCourseDropdown() {
   checkGradeType();
 }
 
+// 🟢 ตรวจสอบ Prerequisite โดยรองรับโครงสร้าง Object หรือ String ของเกรดอย่างปลอดภัย
 function checkUnpassedPrereqs(courseId, passedLookup) {
   const course = COURSE_DATABASE.find(c => c.id === courseId);
   if (!course || !course.prereq || course.prereq.length === 0) return [];
@@ -422,7 +423,8 @@ function checkUnpassedPrereqs(courseId, passedLookup) {
 
     let isPassed = false;
     if (lookup[reqId]) {
-      const g = typeof lookup[reqId] === "object" ? lookup[reqId].grade : lookup[reqId];
+      const item = lookup[reqId];
+      const g = (typeof item === "object" && item !== null) ? item.grade : item;
       if (g && g !== "F") isPassed = true;
     }
 
@@ -438,7 +440,7 @@ function checkUnpassedPrereqs(courseId, passedLookup) {
   return missingPrereqs;
 }
 
-// 🟢 รวมวิชาที่ผ่านแล้ว + วิชาที่ถูกจัดอยู่ในแผนของเทอมก่อนหน้า
+// 🟢 รวมวิชาที่ผ่านแล้ว + วิชาที่ถูกจัดอยู่ในแผนของเทอมก่อนหน้า เพื่อปลดล็อกวิชาตัวต่อในเทอมอนาคต
 function getCumulativePassedMapBeforeTerm(targetTermKey) {
   const map = { ...userGrades };
 
@@ -859,10 +861,12 @@ function buildCourseReviewBadges(course, gradeLetter) {
   `;
 }
 
+// 🟢 แสดงคลังวิชาแนะนำ — เชื่อมโยงเกรดคาดการณ์ที่ผู้ใช้เลือกในตารางเพื่อปลดล็อกตัวต่อแบบ Real-time
 function renderCategorizedRecommendations() {
   const stats = getCurriculumRemainingStats();
   const curYear = document.getElementById("curriculum-year-select") ? document.getElementById("curriculum-year-select").value : "2565";
-  // ดึงวิชาที่ผ่านแล้ว + วิชาที่กรอกเกรดคาดการณ์ (ตั้งแต่ D ขึ้นไป) มาใช้ปลดล็อกตัวต่อ
+
+  // รวบรวมวิชาที่ผ่านแล้ว + วิชาที่ระบุเกรดคาดว่าจะได้ (ตั้งแต่ D ขึ้นไป)
   const effectivePassedLookup = { ...userGrades };
   Object.keys(expectedCourseGrades).forEach(cid => {
     const g = expectedCourseGrades[cid];
@@ -982,7 +986,7 @@ function renderCategorizedRecommendations() {
         </li>`;
 
       sortedAdvEng.forEach((c, idx) => {
-        const missing = checkUnpassedPrereqs(c.id);
+        const missing = checkUnpassedPrereqs(c.id, effectivePassedLookup);
         const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
         const gradeLetter = formatGradeLetter(c.avgGPA);
         const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
@@ -1131,6 +1135,7 @@ function onTermCategoryChange(termKey, selectedCategory) {
     filtered = COURSE_DATABASE.filter(c => c.subType === selectedCategory);
   }
 
+  // 🟢 กรองวิชาที่เคยผ่าน หรือถูกจัดในเทอมก่อนหน้า หรืออยู่ในเทอมปัจจุบันออกทั้งหมด (กันเลือกซ้ำ)
   filtered = filtered.filter(c => {
     const isPassedEarlier = cumulativePassedMap[c.id] && cumulativePassedMap[c.id] !== "F";
     const isInCurrentTerm = currentTermCourses.includes(c.id);

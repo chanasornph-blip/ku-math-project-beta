@@ -349,7 +349,7 @@ body {
 /* จัดแถวเพิ่มวิชาให้เป็นระเบียบ เท่ากันทุกช่อง และไม่ตกบรรทัด */
 div[style*="dashed"] > div {
   display: grid !important;
-  grid-template-columns: minmax(200px, 1.2fr) minmax(220px, 1.8fr) auto !important;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr) auto !important;
   gap: 10px !important;
   align-items: center !important;
   width: 100% !important;
