@@ -862,6 +862,14 @@ function buildCourseReviewBadges(course, gradeLetter) {
 function renderCategorizedRecommendations() {
   const stats = getCurriculumRemainingStats();
   const curYear = document.getElementById("curriculum-year-select") ? document.getElementById("curriculum-year-select").value : "2565";
+  // ดึงวิชาที่ผ่านแล้ว + วิชาที่กรอกเกรดคาดการณ์ (ตั้งแต่ D ขึ้นไป) มาใช้ปลดล็อกตัวต่อ
+  const effectivePassedLookup = { ...userGrades };
+  Object.keys(expectedCourseGrades).forEach(cid => {
+    const g = expectedCourseGrades[cid];
+    if (g && g !== "F") {
+      effectivePassedLookup[cid] = g;
+    }
+  });
 
   // 1. Pure Math
   const pureRem = Math.max(0, 9 - stats.pure.earned);
@@ -879,7 +887,7 @@ function renderCategorizedRecommendations() {
   if (pureList) {
     pureList.innerHTML = "";
     sortedPureCourses.forEach((c, idx) => {
-      const missing = checkUnpassedPrereqs(c.id);
+      const missing = checkUnpassedPrereqs(c.id, effectivePassedLookup);
       const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
       const gradeLetter = formatGradeLetter(c.avgGPA);
       const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
@@ -910,7 +918,7 @@ function renderCategorizedRecommendations() {
   if (appliedList) {
     appliedList.innerHTML = "";
     sortedAppliedCourses.forEach((c, idx) => {
-      const missing = checkUnpassedPrereqs(c.id);
+      const missing = checkUnpassedPrereqs(c.id, effectivePassedLookup);
       const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
       const gradeLetter = formatGradeLetter(c.avgGPA);
       const rule200Badge = c.isLevel200 ? `<span style="background:#f3e8ff; color:#7e22ce; padding:2px 6px; border-radius:4px; font-size:0.78rem; margin-left:4px;">📌 รหัส 200 (นับได้ตัวเดียว)</span>` : "";
@@ -952,7 +960,7 @@ function renderCategorizedRecommendations() {
       if (basicEng.length > 0) {
         engList.innerHTML += `<li style="background:#f8fafc; font-weight:bold; color:#475569;">🔹 รายวิชาภาษาอังกฤษพื้นฐาน</li>`;
         basicEng.forEach(c => {
-          const missing = checkUnpassedPrereqs(c.id);
+          const missing = checkUnpassedPrereqs(c.id, effectivePassedLookup);
           const prereqText = missing.length > 0 ? `<span style="color:#d97706; font-weight:bold;">🔒 ติดตัวต่อ: ยังไม่ได้ผ่าน ${missing.join(", ")}</span>` : `<span style="color:#16a085; font-weight:bold;">✅ พร้อมลงเรียนได้</span>`;
           const gradeLetter = formatGradeLetter(c.avgGPA);
           const badgesHtml = buildCourseReviewBadges(c, gradeLetter);
@@ -1049,7 +1057,6 @@ function addCustomCourseToTerm(termKey, courseId) {
     for (let cid of existingTermCourseIds) {
       const existCourse = COURSE_DATABASE.find(c => c.id === cid);
       if (existCourse && existCourse.type === "eng") {
-        // อนุญาตเฉพาะกรณีที่ทั้งคู่เป็น eng_adv (ENG 3 หรือ ENG 4) เท่านั้น
         const bothAdv = (existCourse.subType === "eng_adv" && targetCourse.subType === "eng_adv");
         if (!bothAdv) {
           alert(`⚠️ ไม่สามารถลงวิชาภาษาอังกฤษนี้ในเทอมเดียวกันได้!\n\nหลักสูตรไม่อนุญาตให้ลง ENG 1 หรือ ENG 2 ซ้อนกับวิชา ENG อื่นในภาคการศึกษาเดียวกัน (อนุญาตเฉพาะกลุ่มวิชา ENG 3 และ ENG 4 เท่านั้นที่สามารถลงคู่กันได้ครับ)`);
@@ -1100,7 +1107,6 @@ function updateExpectedGrade(courseId, gradeVal) {
   processRecommendations();
 }
 
-// 🟢 ตัวกรองรายวิชาในกล่องเพิ่มวิชารายเทอม — กรองวิชาที่เคยเรียน/เคยลงในเทอมก่อนหน้าออกทันที
 function onTermCategoryChange(termKey, selectedCategory) {
   const courseDropdown = document.getElementById(`course-select-${termKey}`);
   if (!courseDropdown) return;
@@ -1125,7 +1131,6 @@ function onTermCategoryChange(termKey, selectedCategory) {
     filtered = COURSE_DATABASE.filter(c => c.subType === selectedCategory);
   }
 
-  // 🟢 กรองวิชาที่ผ่านแล้ว หรือถูกจัดลงในเทอมก่อนหน้า หรืออยู่ในเทอมปัจจุบันออกทั้งหมด (ป้องกันการเลือกซ้ำ)
   filtered = filtered.filter(c => {
     const isPassedEarlier = cumulativePassedMap[c.id] && cumulativePassedMap[c.id] !== "F";
     const isInCurrentTerm = currentTermCourses.includes(c.id);
@@ -1500,7 +1505,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
       const nextEngTarget = getNextRecommendedEngFlow(passedMap);
 
-      // 🟢 จัดรูปแบบกล่องคำแนะนำให้อ่านง่าย เป็นสัดส่วน ชัดเจน
       let adviceLines = [];
 
       if (isSummerTerm) {
@@ -1564,19 +1568,19 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
       });
 
       termHtml += `
-        <div style="margin-top: 12px; padding: 14px; background: #faf5ff; border: 1.5px dashed #c084fc; border-radius: 10px;">
-          <label style="font-size: 0.92rem; font-weight: bold; color: #6b21a8;">➕ เพิ่มวิชาเลือกลงในเทอมนี้ (ลงเพิ่มได้อีกสูงสุด ${remainingCreditQuota} หน่วยกิต):</label>
+        <div style="margin-top: 12px; padding: 14px; background: #faf5ff; border: 1.5px dashed #c084fc; border-radius: 10px; width: 100%; box-sizing: border-box; overflow: hidden;">
+          <label style="font-size: 0.92rem; font-weight: bold; color: #6b21a8; display: block; margin-bottom: 8px;">➕ เพิ่มวิชาเลือกลงในเทอมนี้ (ลงเพิ่มได้อีกสูงสุด ${remainingCreditQuota} หน่วยกิต):</label>
           
-          <div style="display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 8px; margin-top: 8px;">
-            <select id="cat-select-${termKey}" onchange="onTermCategoryChange('${termKey}', this.value)" style="padding: 8px 10px; border-radius: 6px; border: 1px solid #d8b4fe; font-size: 0.9rem;">
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; width: 100%; align-items: center; box-sizing: border-box;">
+            <select id="cat-select-${termKey}" onchange="onTermCategoryChange('${termKey}', this.value)" style="width: 100%; min-width: 0; max-width: 100%; height: 42px; padding: 6px 10px; border-radius: 6px; border: 1px solid #d8b4fe; font-size: 0.88rem; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
               ${categoryOptionsHtml}
             </select>
 
-            <select id="course-select-${termKey}" disabled style="padding: 8px 10px; border-radius: 6px; border: 1px solid #d8b4fe; font-size: 0.9rem; background: #f8fafc;">
+            <select id="course-select-${termKey}" disabled style="width: 100%; min-width: 0; max-width: 100%; height: 42px; padding: 6px 10px; border-radius: 6px; border: 1px solid #d8b4fe; font-size: 0.88rem; background: #f8fafc; box-sizing: border-box; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
               <option value="">-- กรุณาเลือกหัวข้อหมวดวิชาก่อน --</option>
             </select>
 
-            <button onclick="addCustomCourseToTerm('${termKey}', document.getElementById('course-select-${termKey}').value)" style="background:#9333ea; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.92rem;">เพิ่มวิชา</button>
+            <button onclick="addCustomCourseToTerm('${termKey}', document.getElementById('course-select-${termKey}').value)" style="background:#9333ea; color:white; border:none; height: 42px; padding: 0 16px; border-radius: 6px; cursor:pointer; font-weight:bold; font-size:0.9rem; flex-shrink: 0; white-space: nowrap;">เพิ่มวิชา</button>
           </div>
           ${adviceBoxHtml}
         </div>`;
