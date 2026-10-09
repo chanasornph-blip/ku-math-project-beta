@@ -1636,24 +1636,22 @@ function submitReview(event) {
   const commentText = commentInput ? commentInput.value.trim() : "";
   const checkboxes = document.querySelectorAll('input[name="offered_semesters"]:checked');
 
-  // 1. ดักถ้าไม่เขียนรีวิว
+  // 1. ดักเตือนถ้ายังไม่พิมพ์รีวิว
   if (!commentText) {
-    alert("⚠️ กรุณาระบุข้อความรีวิว ประสบการณ์เรียน หรือคำแนะนำเพื่อเป็นประโยชน์แก่เพื่อนๆ ครับ");
+    alert("⚠️ กรุณาระบุข้อความรีวิวก่อนส่งครับ");
     if (commentInput) commentInput.focus();
     return;
   }
 
-  // 2. ดักถ้าไม่ได้ติ๊กเลือกเทอมที่เปิดสอน/ลงเรียน
+  // 2. ดักเตือนถ้ายังไม่ติ๊กเลือกเทอม
   if (checkboxes.length === 0) {
-    alert("⚠️ กรุณาเลือกภาคการศึกษาที่เปิดสอน หรือ ภาคการศึกษาที่คุณลงเรียนจริง อย่างน้อย 1 ภาคครับ");
+    alert("⚠️ กรุณาเลือกภาคการศึกษาที่เปิดสอน/ลงเรียน อย่างน้อย 1 ภาคครับ");
     return;
   }
 
-  // 3. ป็อปอัปยืนยันก่อนส่ง
-  const isConfirm = confirm("คุณต้องการยืนยันการส่งรีวิวนี้ใช่หรือไม่?\n(กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนส่ง)");
-  if (!isConfirm) {
-    return;
-  }
+  // 3. ป๊อปอัปถามยืนยัน
+  const isConfirm = confirm("คุณต้องการยืนยันการส่งรีวิวนี้ใช่หรือไม่?");
+  if (!isConfirm) return;
 
   const selectedCourseId = document.getElementById("review-course-id").value;
   const isOther = selectedCourseId === "OTHER";
@@ -1666,7 +1664,7 @@ function submitReview(event) {
   const payload = {
     type: "review",
     courseId: finalCourseId,
-    userYear: userYearVal, // 🟢 แนบค่าชั้นปีส่งไปด้วย
+    userYear: userYearVal,
     gradeGot: document.getElementById("review-grade-got").value,
     difficulty: document.getElementById("review-difficulty").value,
     onlineRating: document.getElementById("review-online-rating").value,
