@@ -232,17 +232,23 @@ body {
   gap: 16px;
 }
 
-/* Top Dashboard Cards */
+/* Dashboard Cards */
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
   margin-bottom: 24px;
+}
+
+@media (min-width: 860px) {
+  .dashboard {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
 }
 
 .card {
   background: #ffffff;
-  padding: 20px 18px;
+  padding: 18px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--neutral-200);
   box-shadow: var(--shadow-sm);
@@ -258,7 +264,7 @@ body {
 }
 
 .card p {
-  font-size: 1.9rem;
+  font-size: 1.85rem;
   font-weight: 700;
   color: var(--neutral-900);
 }
@@ -481,11 +487,55 @@ div[style*="dashed"] button {
   font-weight: 700;
 }
 
-/* Print Layout */
+/* 🟢 Print Layout: ปรับปรุงโครงสร้างให้พิมพ์ตารางครบถ้วนทุกหน้า */
 @media print {
-  body { background: #ffffff; padding: 0; }
-  .app-header, .main-tab-nav, .step-indicator, .action-footer, button { display: none !important; }
-  .result-block { border: none; box-shadow: none; padding: 0; }
+  body { 
+    background: #ffffff !important; 
+    padding: 10px !important; 
+    color: #000000 !important;
+  }
+  
+  .app-header, 
+  .main-tab-nav, 
+  .step-indicator, 
+  .action-footer, 
+  button, 
+  .step-desc { 
+    display: none !important; 
+  }
+  
+  .result-block { 
+    border: none !important; 
+    box-shadow: none !important; 
+    padding: 0 !important; 
+    margin: 0 !important;
+  }
+
+  #plan-summary-report-container,
+  #plan-summary-report-container > div {
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 20px !important;
+  }
+
+  .summary-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .summary-table th, 
+  .summary-table td {
+    border: 1px solid #94a3b8 !important;
+    padding: 8px 10px !important;
+    color: #000000 !important;
+  }
+
+  .summary-table th {
+    background-color: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
 /* Mobile Responsive */

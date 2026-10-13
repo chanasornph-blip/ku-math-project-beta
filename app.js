@@ -823,7 +823,6 @@ function getCurriculumRemainingStats(currentPassedMap) {
 
   let overflowCredits = 0;
 
-  // GE สาระละ 3 หน่วยกิต
   ['ge_wellness', 'ge_entrepreneur', 'ge_citizen', 'ge_language', 'ge_aesthetic'].forEach(key => {
     const total = rawCategoryEarned[key] || 0;
     if (total > 3) {
@@ -834,7 +833,6 @@ function getCurriculumRemainingStats(currentPassedMap) {
     }
   });
 
-  // Pure & Applied Math หมวดละ 9 หน่วยกิต
   ['pure', 'applied'].forEach(key => {
     const total = rawCategoryEarned[key] || 0;
     if (total > 9) {
@@ -1188,7 +1186,6 @@ function addCustomCourseToTerm(termKey, courseId) {
     const cumulativeMap = getCumulativePassedMapBeforeTerm(termKey);
     const stats = getCurriculumRemainingStats(cumulativeMap);
 
-    // ตรวจสอบว่าหมวดของวิชานี้เก็บครบเกณฑ์ไปแล้วหรือไม่
     let isTargetCatFull = false;
     if (['ge_wellness', 'ge_entrepreneur', 'ge_citizen', 'ge_language', 'ge_aesthetic'].includes(targetCourse.subType)) {
       if (stats[targetCourse.subType].earned >= 3) isTargetCatFull = true;
@@ -1198,7 +1195,6 @@ function addCustomCourseToTerm(termKey, courseId) {
       isTargetCatFull = true;
     }
 
-    // ถ้าหมวดนี้เต็มแล้ว และวิชาเสรีก็ครบ 6 หน่วยกิตแล้ว แต่ยังมีหมวดอื่นที่ยังขาดอยู่
     if (isTargetCatFull && stats.free.earned >= 6) {
       let missingList = [];
       if (stats.eng.earned < stats.eng.req) missingList.push(`• หมวดภาษาอังกฤษ (ขาด ${stats.eng.req - stats.eng.earned} หน่วยกิต)`);
@@ -1222,7 +1218,6 @@ function addCustomCourseToTerm(termKey, courseId) {
       }
     }
 
-    // ตรวจสอบเงื่อนไขการลง ENG ในเทอมเดียวกัน
     if (targetCourse.type === "eng") {
       const existingTermCourseIds = [
         ...(termGeneratedSchedule[termKey] || []),
@@ -1713,7 +1708,6 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
         </div>
       `;
 
-      // 🟢 ตรวจสอบว่ายังมีหมวดวิชาใดในหลักสูตรที่ยังขาดอยู่หรือไม่
       const isAnyCategoryIncomplete = 
         currentStats.pure.earned < 9 ||
         currentStats.applied.earned < 9 ||
@@ -1723,7 +1717,7 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
       let categoryOptionsHtml = `<option value="">-- เลือกหัวข้อหมวดวิชา --</option>`;
 
-      // 1. ENG (บังคับ 9 นก. ไม่สามารถล้นเข้าเสรีได้)
+      // 1. ENG (บังคับ 9 นก.)
       const engCount = availableCourses.filter(c => c.type === "eng").length;
       if (engCount > 0) {
         const rem = Math.max(0, currentStats.eng.req - currentStats.eng.earned);
@@ -1758,7 +1752,7 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
         }
       }
 
-      // 4. หมวด GE ทั้ง 5 สาระ (ครบ 3 แล้ว เกินเข้าเสรี)
+      // 4. หมวด GE ทั้ง 5 สาระ
       geCategories.forEach(g => {
         const list = availableCourses.filter(c => c.subType === g.key);
         const earned = currentStats[g.key].earned;
@@ -1866,6 +1860,7 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
   }
 }
 
+// 🟢 ขั้นที่ 1.4: สร้างตารางสรุปรายงานแผนการเรียนให้แสดงครบทุกเทอม (แก้ปัญหาตารางหายใน PDF)
 function renderPlanSummaryReport() {
   const container = document.getElementById("plan-summary-report-container");
   if (!container) return;
@@ -1874,6 +1869,7 @@ function renderPlanSummaryReport() {
   let totalAttemptedCredits = 0;
   let totalPoints = 0;
 
+  // 1. รวมวิชาที่เคยเรียนผ่านแล้ว
   Object.keys(userGrades).forEach(cid => {
     const item = userGrades[cid];
     const g = typeof item === "object" ? item.grade : item;
@@ -1891,6 +1887,7 @@ function renderPlanSummaryReport() {
     }
   });
 
+  // 2. รวมวิชาในแผนอนาคต
   Object.keys(termGeneratedSchedule).forEach(tKey => {
     const courseList = termGeneratedSchedule[tKey] || [];
     courseList.forEach(cid => {
@@ -1949,66 +1946,67 @@ function renderPlanSummaryReport() {
     </div>
   `;
 
-  const termKeys = Object.keys(termGeneratedSchedule).sort();
-  termKeys.forEach(tKey => {
-    const courseIds = termGeneratedSchedule[tKey] || [];
-    if (courseIds.length === 0) return;
+  // 3. วนลูปสร้างตารางรายเทอมตามลำดับเวลาที่แน่นอน
+  const maxYearsToCheck = 4 + maxExtraYears;
+  for (let y = 1; y <= maxYearsToCheck; y++) {
+    for (let s = 1; s <= 3; s++) {
+      const tKey = `Y${y}S${s}`;
+      const courseIds = termGeneratedSchedule[tKey] || [];
+      if (courseIds.length === 0) continue;
 
-    const match = tKey.match(/Y(\d+)S(\d+)/);
-    const y = match ? match[1] : "";
-    const s = match ? match[2] : "";
-    const termTitle = s === "3" ? `☀️ ภาคฤดูร้อน (Summer) หลังปีที่ ${y}` : `ปีที่ ${y} ภาคการศึกษาที่ ${s}`;
+      const termTitle = s === 3 ? `☀️ ภาคฤดูร้อน (Summer) หลังปีที่ ${y}` : `ปีที่ ${y} ภาคการศึกษาที่ ${s}`;
 
-    let termCredits = 0;
-    let termPoints = 0;
-    let termGradedCredits = 0;
-    let rowsHtml = "";
+      let termCredits = 0;
+      let termPoints = 0;
+      let termGradedCredits = 0;
+      let rowsHtml = "";
 
-    courseIds.forEach((cid, idx) => {
-      const c = COURSE_DATABASE.find(x => x.id === cid);
-      if (!c) return;
-      termCredits += c.credits;
-      const plannedGrade = c.gradeType === 'pass_fail' ? 'ผ่าน (P)' : (expectedCourseGrades[c.id] || "B");
+      courseIds.forEach((cid, idx) => {
+        const c = COURSE_DATABASE.find(x => x.id === cid);
+        if (!c) return;
+        termCredits += c.credits;
+        const plannedGrade = c.gradeType === 'pass_fail' ? 'ผ่าน (P)' : (expectedCourseGrades[c.id] || "B");
 
-      if (c.gradeType !== 'pass_fail' && GRADE_POINTS[plannedGrade] !== undefined) {
-        termPoints += GRADE_POINTS[plannedGrade] * c.credits;
-        termGradedCredits += c.credits;
-      }
+        if (c.gradeType !== 'pass_fail' && GRADE_POINTS[plannedGrade] !== undefined) {
+          termPoints += GRADE_POINTS[plannedGrade] * c.credits;
+          termGradedCredits += c.credits;
+        }
 
-      rowsHtml += `
-        <tr>
-          <td style="text-align: center;">${idx + 1}</td>
-          <td><b>${c.id}</b></td>
-          <td>${c.name}</td>
-          <td style="text-align: center;">${c.credits}</td>
-          <td style="text-align: center;"><span style="font-weight:bold; color:#0369a1; background:#e0f2fe; padding:2px 8px; border-radius:4px;">${plannedGrade}</span></td>
-        </tr>`;
-    });
+        rowsHtml += `
+          <tr>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td><b>${c.id}</b></td>
+            <td>${c.name}</td>
+            <td style="text-align: center;">${c.credits}</td>
+            <td style="text-align: center;"><span style="font-weight:bold; color:#0369a1;">${plannedGrade}</span></td>
+          </tr>`;
+      });
 
-    const termGPA = termGradedCredits > 0 ? (termPoints / termGradedCredits).toFixed(2) : "-";
+      const termGPA = termGradedCredits > 0 ? (termPoints / termGradedCredits).toFixed(2) : "-";
 
-    html += `
-      <div style="margin-bottom: 24px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
-        <div style="background: #f1f5f9; padding: 12px 16px; font-weight: bold; color: #006633; display: flex; justify-content: space-between; align-items: center;">
-          <span>${termTitle}</span>
-          <span style="font-size:0.9rem; color:#475569;">รวม ${termCredits} หน่วยกิต | GPA เทอมนี้: <b style="color:#006633;">${termGPA}</b></span>
-        </div>
-        <table class="summary-table">
-          <thead>
-            <tr>
-              <th style="width: 50px; text-align: center;">ลำดับ</th>
-              <th style="width: 110px;">รหัสวิชา</th>
-              <th>ชื่อรายวิชา</th>
-              <th style="width: 90px; text-align: center;">หน่วยกิต</th>
-              <th style="width: 120px; text-align: center;">เกรดคาดการณ์</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-      </div>`;
-  });
+      html += `
+        <div style="margin-bottom: 22px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: visible;">
+          <div style="background: #f1f5f9; padding: 10px 14px; font-weight: bold; color: #006633; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1;">
+            <span>${termTitle}</span>
+            <span style="font-size:0.9rem; color:#475569;">รวม ${termCredits} หน่วยกิต | GPA ประจำเทอม: <b style="color:#006633;">${termGPA}</b></span>
+          </div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">ลำดับ</th>
+                <th style="width: 105px;">รหัสวิชา</th>
+                <th>ชื่อรายวิชา</th>
+                <th style="width: 85px; text-align: center;">หน่วยกิต</th>
+                <th style="width: 110px; text-align: center;">เกรดคาดการณ์</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>`;
+    }
+  }
 
   container.innerHTML = html;
 }
