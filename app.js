@@ -224,12 +224,19 @@ function onUserYearChange() {
     `;
   }
 
+  userGrades = {};
+  renderAddedCoursesList();
+
   maxExtraYears = 0;
   checkFreshmanLock();
   resetDownstreamSteps();
 }
 
 function onUserSemesterChange() {
+  // 🟢 ล้างวิชาที่เคยกรอกไว้ทั้งหมดทันทีเมื่อเปลี่ยนเทอม
+  userGrades = {};
+  renderAddedCoursesList();
+
   maxExtraYears = 0;
   checkFreshmanLock();
   resetDownstreamSteps();
