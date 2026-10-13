@@ -296,7 +296,12 @@ function completeStep3() {
     const list = termGeneratedSchedule[tKey] || [];
     list.forEach(cid => {
       allScheduledCourseIds.push(cid);
-      cumulativeMap[cid] = expectedCourseGrades[cid] || "P";
+      const c = COURSE_DATABASE.find(x => x.id === cid);
+      if (c && c.gradeType === 'pass_fail') {
+        if (expectedCourseGrades[cid]) cumulativeMap[cid] = "P";
+      } else if (expectedCourseGrades[cid]) {
+        cumulativeMap[cid] = expectedCourseGrades[cid];
+      }
     });
   });
 
@@ -328,7 +333,7 @@ function completeStep3() {
   let coursesMissingGrade = [];
   allScheduledCourseIds.forEach(cid => {
     const c = COURSE_DATABASE.find(x => x.id === cid);
-    if (c && c.gradeType !== "pass_fail") {
+    if (c) {
       if (!expectedCourseGrades[cid] || expectedCourseGrades[cid] === "") {
         if (!coursesMissingGrade.includes(`${c.id} ${c.name}`)) {
           coursesMissingGrade.push(`${c.id} ${c.name}`);
@@ -375,12 +380,21 @@ function checkGradeType() {
   const courseId = courseSelect.value;
   const course = COURSE_DATABASE.find(c => c.id === courseId);
 
+  // 🟢 ล็อกศาสตร์แห่งแผ่นดินให้เป็น "P" (ผ่าน) ตัวเดียวเท่านั้น
   if (course && course.gradeType === "pass_fail") {
-    gradeSelect.value = "P";
+    gradeSelect.innerHTML = `<option value="P" selected>P (ผ่าน / S)</option>`;
     gradeSelect.disabled = true;
   } else {
     gradeSelect.disabled = false;
-    if (gradeSelect.value === "P") gradeSelect.value = "A";
+    gradeSelect.innerHTML = `
+      <option value="A">A (4.0)</option>
+      <option value="B+">B+ (3.5)</option>
+      <option value="B">B (3.0)</option>
+      <option value="C+">C+ (2.5)</option>
+      <option value="C">C (2.0)</option>
+      <option value="D+">D+ (1.5)</option>
+      <option value="D">D (1.0)</option>
+    `;
   }
 }
 
@@ -445,7 +459,7 @@ function filterCourseDropdown() {
     const subCat = subCatEl ? subCatEl.value : "ge_wellness";
     filtered = COURSE_DATABASE.filter(c => c.type === "ge" && c.subType === subCat);
   } else if (cat === "free") {
-    filtered = COURSE_DATABASE.filter(c => c.type === "free" || c.type === "ge");
+    filtered = COURSE_DATABASE.filter(c => c.type === "free" || c.type === "ge" || c.type === "pure" || c.type === "applied");
   } else {
     filtered = COURSE_DATABASE.filter(c => c.type === cat);
   }
@@ -754,6 +768,7 @@ function sortRecommendedCourses(coursesList) {
   });
 }
 
+// 🟢 คำนวณหน่วยกิตสะสมรายหมวด (รวมทั้งวิชาในอดีต + วิชาที่วางแผนและใส่เกรดคาดการณ์แล้ว)
 function getCurriculumRemainingStats(currentPassedMap) {
   let stats = {
     core: { name: "วิชาแกน", req: 26, earned: 0 },
@@ -774,13 +789,18 @@ function getCurriculumRemainingStats(currentPassedMap) {
   if (currentPassedMap) {
     allPlannedMap = { ...currentPassedMap };
   } else {
-    Object.values(termCustomCourses).forEach(arr => {
-      arr.forEach(cid => { allPlannedMap[cid] = "P"; });
+    // ดึงวิชาทั้งหมดในตารางแผนรายเทอมเฉพาะที่มีการใส่เกรดคาดการณ์แล้ว
+    Object.keys(expectedCourseGrades).forEach(cid => {
+      const g = expectedCourseGrades[cid];
+      if (g && g !== "F") {
+        allPlannedMap[cid] = g;
+      }
     });
   }
 
   let level200Count = 0;
   let rawCategoryEarned = {
+    eng: 0,
     pure: 0, applied: 0,
     ge_wellness: 0, ge_entrepreneur: 0, ge_citizen: 0, ge_language: 0, ge_aesthetic: 0,
     free: 0
@@ -797,8 +817,13 @@ function getCurriculumRemainingStats(currentPassedMap) {
     if (isPassed) {
       const c = COURSE_DATABASE.find(x => x.id === id);
       if (c) {
-        if (c.type === "core" || c.type === "mandatory" || c.type === "land" || c.type === "eng") {
+        if (c.type === "core" || c.type === "mandatory" || c.type === "land") {
           stats[c.type].earned += c.credits;
+          return;
+        }
+
+        if (c.type === "eng") {
+          rawCategoryEarned.eng += c.credits;
           return;
         }
 
@@ -823,6 +848,15 @@ function getCurriculumRemainingStats(currentPassedMap) {
 
   let overflowCredits = 0;
 
+  // 1. ภาษาอังกฤษ (ENG บังคับ 9 นก. ส่วนเกินเข้าเสรี)
+  if (rawCategoryEarned.eng > 9) {
+    stats.eng.earned = 9;
+    overflowCredits += (rawCategoryEarned.eng - 9);
+  } else {
+    stats.eng.earned = rawCategoryEarned.eng;
+  }
+
+  // 2. GE สาระละ 3 หน่วยกิต ส่วนเกินเข้าเสรี
   ['ge_wellness', 'ge_entrepreneur', 'ge_citizen', 'ge_language', 'ge_aesthetic'].forEach(key => {
     const total = rawCategoryEarned[key] || 0;
     if (total > 3) {
@@ -833,6 +867,7 @@ function getCurriculumRemainingStats(currentPassedMap) {
     }
   });
 
+  // 3. Pure & Applied Math หมวดละ 9 หน่วยกิต ส่วนเกินเข้าเสรี
   ['pure', 'applied'].forEach(key => {
     const total = rawCategoryEarned[key] || 0;
     if (total > 9) {
@@ -856,8 +891,9 @@ function processRecommendations() {
   const currentSem = semEl ? parseInt(semEl.value) : 0;
   const targetGPAX = targetEl ? parseFloat(targetEl.value) : 3.25;
 
-  let earnedCredits = 0, totalPoints = 0, totalAttemptedCredits = 0;
+  let earnedPastCredits = 0, totalPoints = 0, totalAttemptedCredits = 0;
   
+  // นับวิชาที่ผ่านจริงในอดีต (Passed Course)
   COURSE_DATABASE.forEach(course => {
     const item = userGrades[course.id];
     if (item) {
@@ -869,7 +905,7 @@ function processRecommendations() {
       }
 
       if (grade && grade !== "F") {
-        earnedCredits += course.credits;
+        earnedPastCredits += course.credits;
         if (GRADE_POINTS[grade] !== undefined && course.gradeType !== "pass_fail") {
           totalPoints += GRADE_POINTS[grade] * course.credits;
           totalAttemptedCredits += course.credits;
@@ -878,13 +914,32 @@ function processRecommendations() {
     }
   });
 
+  // นับวิชาที่วางแผนในอนาคตและระบุเกรดคาดการณ์แล้ว
+  let plannedEarnedCredits = 0;
+  Object.keys(expectedCourseGrades).forEach(cid => {
+    const g = expectedCourseGrades[cid];
+    if (g && g !== "F") {
+      const c = COURSE_DATABASE.find(x => x.id === cid);
+      if (c && !userGrades[c.id]) {
+        plannedEarnedCredits += c.credits;
+      }
+    }
+  });
+
+  const totalAllEarned = earnedPastCredits + plannedEarnedCredits;
   const currentGPAX = totalAttemptedCredits > 0 ? (totalPoints / totalAttemptedCredits) : 0;
   
   const totalCreditsEl = document.getElementById("total-credits");
   const gpaxValEl = document.getElementById("gpax-val");
   const statusDescEl = document.getElementById("academic-status-desc");
 
-  if (totalCreditsEl) totalCreditsEl.innerText = `${earnedCredits} / 128 หน่วยกิต`;
+  if (totalCreditsEl) {
+    totalCreditsEl.innerHTML = `
+      ${totalAllEarned} / 128 หน่วยกิต
+      <small style="display:block; font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px;">
+        (ผ่านแล้วจริง: ${earnedPastCredits} นก. | วางแผนใส่เกรด: ${plannedEarnedCredits} นก.)
+      </small>`;
+  }
   if (gpaxValEl) gpaxValEl.innerText = currentGPAX.toFixed(2);
 
   const isPostYear1Sem1 = (currentYear > 1) || (currentYear === 1 && currentSem >= 2);
@@ -907,7 +962,7 @@ function processRecommendations() {
     }
   }
 
-  const remainingCredits = Math.max(0, 128 - earnedCredits);
+  const remainingCredits = Math.max(0, 128 - totalAllEarned);
   const targetValEl = document.getElementById("required-gpa-val");
   const targetDescEl = document.getElementById("required-gpa-desc");
 
@@ -1171,7 +1226,6 @@ function renderCategorizedRecommendations() {
   }
 }
 
-// 🟢 เพิ่มวิชา: ตรวจจับหากหมวดวิชาและเสรีเต็มแล้ว แต่ยังมีหมวดอื่นขาดอยู่ จะบล็อกไม่ให้ลงและ Alert ทันที
 function addCustomCourseToTerm(termKey, courseId) {
   if (!courseId) return;
   if (!termCustomCourses[termKey]) termCustomCourses[termKey] = [];
@@ -1192,6 +1246,8 @@ function addCustomCourseToTerm(termKey, courseId) {
     } else if (targetCourse.type === 'pure' && stats.pure.earned >= 9) {
       isTargetCatFull = true;
     } else if (targetCourse.type === 'applied' && stats.applied.earned >= 9) {
+      isTargetCatFull = true;
+    } else if (targetCourse.type === 'eng' && stats.eng.earned >= 9) {
       isTargetCatFull = true;
     }
 
@@ -1577,9 +1633,19 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
     let termHtml = `<div class="term-block" style="${isSummerTerm ? 'border: 2px dashed #f59e0b; background: #fffbeb;' : ''}">
       <h4>${termTitle} ${summerBadge} ${termProWarningHtml}</h4>`;
 
+    // 🟢 สร้าง Dropdown เกรดเป้าหมาย (รองรับ Pass/Fail สำหรับศาสตร์แห่งแผ่นดิน)
     const renderGradeExpectedSelect = (courseId, isPassFail) => {
-      if (isPassFail) return `<span style="font-size:0.82rem; color:#16a085; font-weight:bold; margin-left:10px;">(P/F)</span>`;
       const currentSelected = expectedCourseGrades[courseId] || "";
+      if (isPassFail) {
+        return `
+          <div style="display:inline-flex; align-items:center; gap:4px; margin-left:8px;">
+            <label style="font-size:0.82rem; color:#166534; font-weight:bold;">🎯 ผลการเรียน:</label>
+            <select onchange="updateExpectedGrade('${courseId}', this.value)" style="padding:2px 6px; font-size:0.82rem; border-radius:4px; border:1px solid #16a085; font-weight:bold; color:#166534; background:#f0fdf4; cursor:pointer;">
+              <option value="">-- ยังไม่เลือก --</option>
+              <option value="P" ${currentSelected === 'P' ? 'selected' : ''}>ผ่าน (P)</option>
+            </select>
+          </div>`;
+      }
       return `
         <div style="display:inline-flex; align-items:center; gap:4px; margin-left:8px;">
           <label style="font-size:0.82rem; color:#475569; font-weight:bold;">🎯 เกรดคาดว่าจะได้:</label>
@@ -1717,14 +1783,15 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
       let categoryOptionsHtml = `<option value="">-- เลือกหัวข้อหมวดวิชา --</option>`;
 
-      // 1. ENG (บังคับ 9 นก.)
+      // 1. ENG (ครบ 9 แล้ว เกินเข้าเสรีได้)
       const engCount = availableCourses.filter(c => c.type === "eng").length;
       if (engCount > 0) {
         const rem = Math.max(0, currentStats.eng.req - currentStats.eng.earned);
-        if (rem === 0 && isAnyCategoryIncomplete) {
-          categoryOptionsHtml += `<option value="eng" disabled style="color:#94a3b8;">🔒 🇬🇧 หมวดภาษาอังกฤษ (ครบ 9 หน่วยกิตแล้ว)</option>`;
+        const isEngFull = rem === 0;
+        if (isEngFull && isAnyCategoryIncomplete && currentStats.free.earned >= 6) {
+          categoryOptionsHtml += `<option value="eng" disabled style="color:#94a3b8;">🔒 🇬🇧 หมวดภาษาอังกฤษ (ครบแล้ว - กรุณาเก็บหมวดที่ขาดก่อน)</option>`;
         } else {
-          categoryOptionsHtml += `<option value="eng">🇬🇧 หมวดภาษาอังกฤษ (ENG) (${rem > 0 ? `🚨 ยังขาด ${rem} หน่วยกิต` : 'ครบตามเกณฑ์แล้ว'})</option>`;
+          categoryOptionsHtml += `<option value="eng">🇬🇧 หมวดภาษาอังกฤษ (ENG) (${isEngFull ? 'ครบแล้ว (หน่วยกิตเกินเข้าเสรี)' : `🚨 ยังขาด ${rem} หน่วยกิต`})</option>`;
         }
       }
 
