@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KU Math Academic Planner & Course Review</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -14,41 +14,51 @@
     <!-- Header -->
     <header class="app-header">
       <h1>KU Math Academic Planner</h1>
-      <p>ระบบวางแผนการเรียน คำนวณเกรดเป้าหมายรายเทอม และศูนย์รวมรีวิวรายวิชา</p>
+      <p>ระบบวางแผนการลงทะเบียนเรียน ตรวจสอบเงื่อนไขหลักสูตร และศูนย์รวมรีวิวรายวิชา</p>
     </header>
 
     <!-- Main Navigation Tabs -->
     <nav class="main-tab-nav">
-      <button id="main-tab-1" class="main-tab-btn active" onclick="switchMainTab('planner')">🎓 ระบบวางแผนและแนะนำวิชาเรียน</button>
+      <button id="main-tab-1" class="main-tab-btn active" onclick="switchMainTab('planner')">🎓 ระบบวางแผนและจำลองผลการศึกษา</button>
       <button id="main-tab-2" class="main-tab-btn" onclick="switchMainTab('review')">💬 ศูนย์รวมรีวิวรายวิชา</button>
     </nav>
 
     <!-- SECTION 1: Academic Planner -->
     <section id="section-planner" class="main-section active">
 
-      <!-- Step Indicator -->
+      <!-- Step Indicator พร้อมตัวเลขนำสายตา -->
       <div class="step-indicator">
-        <button id="step-node-1" class="step-node active" onclick="goToStep(1)">1.1 ประวัติการเรียน & หลักสูตร</button>
-        <button id="step-node-2" class="step-node disabled" onclick="goToStep(2)">1.2 เป้าหมายการเรียน</button>
-        <button id="step-node-3" class="step-node disabled" onclick="goToStep(3)">1.3 แผนและวิชาแนะนำรายเทอม</button>
+        <button id="step-node-1" class="step-node active" onclick="goToStep(1)">
+          <span class="step-badge">1</span> ข้อมูล & ผลการเรียน
+        </button>
+        <button id="step-node-2" class="step-node disabled" onclick="goToStep(2)">
+          <span class="step-badge">2</span> ตั้งเป้าหมาย GPAX
+        </button>
+        <button id="step-node-3" class="step-node disabled" onclick="goToStep(3)">
+          <span class="step-badge">3</span> จัดแผนเรียนรายเทอม
+        </button>
+        <button id="step-node-4" class="step-node disabled" onclick="goToStep(4)">
+          <span class="step-badge">4</span> สรุปแผนการศึกษา
+        </button>
       </div>
 
       <!-- Step 1.1 -->
       <div id="step-1" class="wizard-step active">
         <div class="result-block">
-          <h2>ขั้นที่ 1.1: เลือกหลักสูตร สถานะปัจจุบัน และวิชาที่เรียนผ่านแล้ว</h2>
+          <h2>ขั้นตอนที่ 1: เลือกหลักสูตร สถานะปัจจุบัน และวิชาที่เรียนผ่านแล้ว</h2>
+          <p class="step-desc">ระบุหลักสูตรและชั้นปีปัจจุบันของคุณ เพื่อให้ระบบนำเข้าโครงสร้างรายวิชาและคำนวณหน่วยกิตได้อย่างถูกต้อง</p>
           
           <div class="add-course-grid">
             <div class="form-group">
-              <label>📜 เลือกหลักสูตร:</label>
+              <label>📜 โครงสร้างหลักสูตร:</label>
               <select id="curriculum-year-select" onchange="onCurriculumChange()">
-                <option value="2565">หลักสูตร พ.ศ. 2565</option>
-                <option value="2569">หลักสูตร พ.ศ. 2569 (ปรับปรุงใหม่)</option>
+                <option value="2565">หลักสูตรวิทยาศาสตรบัณฑิต พ.ศ. 2565</option>
+                <option value="2569">หลักสูตรวิทยาศาสตรบัณฑิต พ.ศ. 2569 (ปรับปรุงใหม่)</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>📌 เลือกชั้นปีปัจจุบันของคุณ:</label>
+              <label>📌 ชั้นปีปัจจุบัน:</label>
               <select id="user-year-select" onchange="onUserYearChange()">
                 <option value="1">นิสิตชั้นปีที่ 1</option>
                 <option value="2">นิสิตชั้นปีที่ 2</option>
@@ -60,54 +70,60 @@
             </div>
 
             <div class="form-group">
-              <label>📅 ภาคการศึกษาที่เพิ่งจบ / สถานะปัจจุบัน:</label>
-              <select id="user-semester-select" onchange="resetDownstreamSteps()">
-                <option value="0">🌟 ยังไม่เริ่มเรียนสักเทอม (กำลังจะเริ่มปี 1 เทอม 1)</option>
-                <option value="1">จบภาคต้น (เทอม 1) ของปี 1 แล้ว</option>
-                <option value="2">จบภาคปลาย (เทอม 2) ของปี 1 แล้ว</option>
+              <label>📅 ภาคการศึกษาล่าสุดที่สำเร็จการศึกษา:</label>
+              <select id="user-semester-select" onchange="onUserSemesterChange()">
+                <option value="0">🌟 กำลังจะเริ่มศึกษาในชั้นปีที่ 1 ภาคต้น (ยังไม่เคยลงทะเบียนเรียน)</option>
+                <option value="1">สำเร็จการศึกษาภาคต้น (เทอม 1) ของปี 1 แล้ว</option>
+                <option value="2">สำเร็จการศึกษาภาคปลาย (เทอม 2) ของปี 1 แล้ว</option>
               </select>
             </div>
           </div>
 
           <!-- ENG Setting -->
-          <div id="eng-curriculum-2565-box" style="margin-top: 10px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-            <label style="font-weight: 600; color: #166534; font-size: 0.95rem;">🇬🇧 [เฉพาะหลักสูตร 2565] เลือกวิชา ภาษาอังกฤษ (ENG) ตัวแรกที่คุณเริ่มเรียน:</label>
+          <div id="eng-curriculum-2565-box" style="margin-top: 10px; padding: 14px 16px; background: var(--primary-soft); border: 1.5px solid #bbf7d0; border-radius: 10px;">
+            <label style="font-weight: 600; color: #166534; font-size: 0.95rem;">🇬🇧 [เกณฑ์หมวดภาษาอังกฤษ หลักสูตร 2565] ระดับวิชาภาษาอังกฤษเริ่มต้นของคุณ:</label>
             <select id="eng-start-level" onchange="onCurriculumOrEngChange()" style="margin-top: 6px;">
-              <option value="ENG1">เริ่มต้นที่ ENG 1 (ต้องเรียน ENG 1 ➔ ENG 2 ➔ ENG 3/4)</option>
-              <option value="ENG2">เริ่มต้นที่ ENG 2 (เว้น ENG 1, เรียน ENG 2 ➔ ENG 3/4)</option>
-              <option value="ENG3">เริ่มต้นที่ ENG 3 / ENG 4 (เว้น ENG 1-2, เรียนเฉพาะกลุ่ม ENG 3/4)</option>
+              <option value="ENG1">เริ่มต้นเรียนที่ ENG 1 (เรียนครบตามลำดับ: ENG 1 ➔ ENG 2 ➔ ENG 3/4)</option>
+              <option value="ENG2">ได้รับการยกเว้น ENG 1 (เริ่มต้นเรียนที่ ENG 2 ➔ ENG 3/4)</option>
+              <option value="ENG3">ได้รับการยกเว้น ENG 1 และ 2 (ลงเรียนเฉพาะกลุ่มวิชา ENG 3 และ ENG 4)</option>
             </select>
           </div>
 
-          <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--neutral-200);">
 
-          <!-- กล่องแจ้งเตือนสำหรับผู้ที่ยังไม่เริ่มเรียนสักเทอม -->
-          <div id="freshman-notice-box" style="display: none; padding: 14px 16px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; margin-bottom: 16px;">
-            <b style="color: #1e40af; font-size: 1rem;">🌟 ยินดีต้อนรับนิสิตใหม่!</b>
-            <p style="color: #3b82f6; font-size: 0.92rem; margin-top: 4px;">เนื่องจากคุณยังไม่ได้เริ่มเรียนเทอมใดเลย จึงยังไม่มีประวัติวิชาที่เรียนผ่าน ระบบจะล็อกการใส่เกรดวิชาไว้ คุณสามารถกดปุ่ม <b>"ยืนยันข้อมูล & ไปตั้งเป้าหมาย"</b> ด้านล่างเพื่อเริ่มวางแผนและตั้งเป้าหมาย GPAX ได้ทันทีครับ</p>
+          <!-- กล่องแจ้งเตือนนิสิตใหม่ (ชัดเจน ไม่สับสน) -->
+          <div id="freshman-notice-box" style="display: none; padding: 18px 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #60a5fa; border-radius: 12px; margin-bottom: 22px;">
+            <b style="color: #1e40af; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+              🌟 สำหรับนิสิตใหม่ (กำลังจะเริ่มเรียนภาคต้น ปีที่ 1)
+            </b>
+            <p style="color: #1e3a8a; font-size: 0.92rem; margin-top: 6px; line-height: 1.5;">
+              เนื่องจากคุณยังไม่มีประวัติผลการเรียนในระบบ จึงไม่จำเป็นต้องบันทึกรายวิชาในส่วนนี้ สามารถกดปุ่ม <b>"ยืนยันข้อมูล & ไปตั้งเป้าหมาย ➔"</b> ด้านล่างเพื่อเริ่มวางแผนการเรียนได้ทันที
+            </p>
           </div>
 
+          <!-- ฟอร์มบันทึกผลการเรียนที่ผ่านมา -->
           <div id="passed-course-entry-section">
-            <h3>➕ เลือกบันทึกวิชาที่เรียนผ่านแล้ว</h3>
+            <h3 style="margin-bottom: 6px;">➕ บันทึกรายวิชาที่สอบผ่านแล้ว (สำหรับผู้มีผลการเรียนแล้ว)</h3>
+            <p style="font-size: 0.88rem; color: var(--neutral-600); margin-bottom: 14px;">เลือกวิชาและเกรดที่ได้ เพื่อนำไปคำนวณหน่วยกิตสะสมและ GPAX ปัจจุบัน</p>
+            
             <div class="add-course-grid">
               <div class="form-group">
-                <label>1. เลือกหมวดหลัก:</label>
+                <label>1. หมวดรายวิชา:</label>
                 <select id="add-category-select" onchange="onMainCategoryChange()">
                   <option value="core">หมวดวิชาแกน (26 หน่วยกิต)</option>
                   <option value="mandatory">หมวดวิชาเฉพาะบังคับ (42 หน่วยกิต)</option>
                   <option value="land">หมวดวิชาศาสตร์แห่งแผ่นดิน (2 หน่วยกิต - คิดเป็น P)</option>
                   <option value="eng">หมวดวิชาภาษาอังกฤษ (ENG)</option>
-                  <option value="pure">วิชาเลือก Pure Math</option>
-                  <option value="applied">วิชาเลือก Applied Math</option>
+                  <option value="pure">วิชาเลือกเฉพาะทาง: Pure Math</option>
+                  <option value="applied">วิชาเลือกเฉพาะทาง: Applied Math</option>
                   <option value="ge">หมวดวิชาศึกษาทั่วไป (GE)</option>
                   <option value="free">หมวดวิชาเลือกเสรี</option>
-                  <option value="other">➕ เพิ่มวิชาอื่นๆ นอกเหนือจากคลังวิชา</option>
+                  <option value="other">➕ เพิ่มวิชาอื่นนอกเหนือจากคลังข้อมูล</option>
                 </select>
               </div>
 
-              <!-- หมวดย่อยสำหรับ GE -->
               <div class="form-group" id="sub-category-group" style="display: none;">
-                <label>หมวดย่อย GE:</label>
+                <label>กลุ่มสาระ GE:</label>
                 <select id="add-subcategory-select" onchange="filterCourseDropdown()">
                   <option value="ge_wellness">สาระอยู่ดีมีสุข</option>
                   <option value="ge_entrepreneur">สาระศาสตร์แห่งผู้ประกอบการ</option>
@@ -118,12 +134,12 @@
               </div>
 
               <div class="form-group" id="course-select-box">
-                <label>2. เลือกรหัส/ชื่อวิชา:</label>
+                <label>2. รหัสและชื่อรายวิชา:</label>
                 <select id="add-course-select" onchange="checkGradeType()"></select>
               </div>
 
               <div class="form-group">
-                <label>3. เกรดที่เรียนผ่านล่าสุด:</label>
+                <label>3. ผลการประเมิน (เกรด):</label>
                 <select id="add-grade-select">
                   <option value="A">A (4.0)</option>
                   <option value="B+">B+ (3.5)</option>
@@ -137,15 +153,15 @@
               </div>
             </div>
 
-            <!-- Other Course Fields -->
-            <div id="step1-other-course-fields" style="display: none; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 14px;">
+            <!-- กล่องเพิ่มวิชาอื่น -->
+            <div id="step1-other-course-fields" style="display: none; background: var(--neutral-50); padding: 16px; border-radius: 10px; border: 1.5px dashed var(--neutral-300); margin-bottom: 14px;">
               <div class="add-course-grid">
                 <div class="form-group">
                   <label>รหัสวิชา (8 หลัก):</label>
                   <input type="text" id="step1-other-code" placeholder="เช่น 01418211">
                 </div>
                 <div class="form-group">
-                  <label>ชื่อวิชา:</label>
+                  <label>ชื่อรายวิชา:</label>
                   <input type="text" id="step1-other-name" placeholder="เช่น การเขียนโปรแกรมขั้นสูง">
                 </div>
                 <div class="form-group">
@@ -153,7 +169,7 @@
                   <input type="number" id="step1-other-credits" value="3" min="1" max="6">
                 </div>
                 <div class="form-group">
-                  <label>หมวดหลัก:</label>
+                  <label>กลุ่มหมวดวิชา:</label>
                   <select id="step1-other-category" onchange="onOtherCategoryChange()">
                     <option value="free">หมวดวิชาเลือกเสรี</option>
                     <option value="ge">หมวดวิชาศึกษาทั่วไป (GE)</option>
@@ -162,7 +178,7 @@
                   </select>
                 </div>
                 <div class="form-group" id="step1-other-subcat-group" style="display: none;">
-                  <label>หมวดย่อย GE:</label>
+                  <label>กลุ่มสาระ GE:</label>
                   <select id="step1-other-subcategory">
                     <option value="ge_wellness">สาระอยู่ดีมีสุข</option>
                     <option value="ge_entrepreneur">สาระศาสตร์แห่งผู้ประกอบการ</option>
@@ -172,24 +188,23 @@
                   </select>
                 </div>
               </div>
+              <small style="color: var(--neutral-600); display: block;">💡 ข้อมูลรายวิชาใหม่จะถูกส่งไปยังระบบตรวจสอบของ Google Sheets โดยอัตโนมัติ</small>
             </div>
 
-            <!-- กล่องติ๊กเคยติด F (ชุดเดียว) -->
-            <div style="margin-top: -4px; margin-bottom: 14px; padding: 12px 14px; background: #fff1f2; border: 1px dashed #f43f5e; border-radius: 8px;">
-              <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #be123c; cursor: pointer;">
+            <div style="margin-top: -4px; margin-bottom: 16px; padding: 12px 14px; background: var(--danger-soft); border: 1px dashed #fca5a5; border-radius: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #b91c1c; cursor: pointer; font-size: 0.9rem;">
                 <input type="checkbox" id="add-failed-before" style="width: 18px; height: 18px;">
-                <span>⚠️ เคยติด F ในวิชานี้มาก่อนที่จะเรียนผ่าน (นำหน่วยกิตรอบที่ติด F มาร่วมคิด GPAX สะสมจริง)</span>
+                <span>⚠️ เคยติดอักษร F ในวิชานี้มาก่อนที่จะสอบผ่าน (นำหน่วยกิตของภาคที่ติด F มาร่วมคิด GPAX สะสมจริง)</span>
               </label>
             </div>
 
-            <!-- ปุ่มเพิ่มวิชา (ชุดเดียว) -->
-            <button id="add-course-btn" class="next-btn" onclick="addCourseToList()" style="width: 100%;">＋ เพิ่มวิชานี้เข้าแผนการเรียน</button>
+            <button id="add-course-btn" class="next-btn" onclick="addCourseToList()" style="width: 100%;">＋ บันทึกวิชานี้เข้าสู่ระบบ</button>
           </div>
         </div>
 
-        <!-- Added Courses List -->
+        <!-- รายการวิชาที่บันทึกแล้ว -->
         <div class="result-block">
-          <h3>📋 รายวิชาที่คุณบันทึกแล้ว (<span id="added-course-count">0</span> วิชา)</h3>
+          <h3>📋 รายวิชาที่บันทึกผลการเรียนแล้ว (<span id="added-course-count">0</span> วิชา)</h3>
           <div id="added-courses-list" style="margin-top: 10px;">
             <p style="color:#888; padding: 10px;">ยังไม่มีรายวิชาที่เลือก</p>
           </div>
@@ -203,41 +218,40 @@
       <!-- Step 1.2 -->
       <div id="step-2" class="wizard-step">
         <div class="result-block">
-          <h2>ขั้นที่ 1.2: ตั้งเป้าหมายการเรียน และความต้องการรายวิชา</h2>
-          <p class="step-desc">ระบุเกรดเฉลี่ยสะสม (GPAX) ที่คุณต้องการเมื่อสำเร็จการศึกษา เพื่อให้ระบบคำนวณเกรดขั้นต่ำในวิชาที่เหลือ</p>
+          <h2>ขั้นตอนที่ 2: ตั้งเป้าหมายผลการศึกษา และรูปแบบการเรียนที่ต้องการ</h2>
+          <p class="step-desc">กำหนดเกรดเฉลี่ยสะสมเป้าหมายเมื่อสำเร็จการศึกษา (GPAX) และสไตล์การเรียน เพื่อให้ระบบจัดสรรวิชาและคำนวณเกรดขั้นต่ำในแต่ละเทอม</p>
 
           <div class="form-group">
-            <label>🎯 เกรดเฉลี่ยสะสมเป้าหมายเมื่อสำเร็จการศึกษา (GPAX เป้าหมาย):</label>
-            <input type="number" id="pref-target-gpax" step="0.05" min="2.00" max="4.00" value="3.25" onchange="resetDownstreamFromStep2()" style="font-size: 1.1rem; font-weight: bold; color: #006633;">
-            <small style="color: #64748b; display: block; margin-top: 4px;">เกียรตินิยมอันดับ 1: 3.50 ขึ้นไป | เกียรตินิยมอันดับ 2: 3.25 ขึ้นไป | เกณฑ์จบขั้นต่ำ: 2.00</small>
+            <label>🎯 เกรดเฉลี่ยสะสมเป้าหมายเมื่อสำเร็จการศึกษา (เป้าหมาย GPAX):</label>
+            <input type="number" id="pref-target-gpax" step="0.05" min="2.00" max="4.00" value="3.25" onchange="resetDownstreamFromStep2()" style="font-size: 1.15rem; font-weight: bold; color: var(--primary);">
+            <small style="color: var(--neutral-600); display: block; margin-top: 4px;">เกียรตินิยมอันดับ 1: 3.50 ขึ้นไป | เกียรตินิยมอันดับ 2: 3.25 ขึ้นไป | เกณฑ์สำเร็จการศึกษาขั้นต่ำ: 2.00</small>
           </div>
 
-          <!-- ตัวเลือก Preference สไตล์การเรียนและการสอบ เพื่อนำไปจัดอันดับวิชาแนะนำ -->
-          <div class="add-course-grid" style="margin-top: 15px;">
+          <div class="add-course-grid" style="margin-top: 18px;">
             <div class="form-group">
               <label>🏫 รูปแบบการเรียนการสอนที่ต้องการเน้น:</label>
               <select id="pref-online-rating" onchange="resetDownstreamFromStep2()">
-                <option value="ALL">-- ไม่จำกัด (แสดงทั้งหมด) --</option>
-                <option value="onsite">เน้น Onsite ในห้องเรียน 100%</option>
-                <option value="hybrid">เน้น Hybrid (มีทั้งในห้องและออนไลน์)</option>
-                <option value="online">เน้น Online 100%</option>
+                <option value="ALL">-- ไม่จำกัดรูปแบบ (แสดงทั้งหมด) --</option>
+                <option value="onsite">เน้นเรียนในห้องเรียนปกติ (Onsite)</option>
+                <option value="hybrid">เน้นแบบผสมผสาน (Hybrid)</option>
+                <option value="online">เน้นเรียนแบบออนไลน์ (Online)</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>📝 สัดส่วนคะแนนและการสอบที่ต้องการเน้น:</label>
+              <label>📝 สัดส่วนการวัดผลและประเมินคะแนน:</label>
               <select id="pref-exam-rating" onchange="resetDownstreamFromStep2()">
-                <option value="ALL">-- ไม่จำกัด (แสดงทั้งหมด) --</option>
-                <option value="exam">เน้นสอบเป็นหลัก (มิดเทอม / ไฟนอล)</option>
-                <option value="hybrid">เน้นผสมผสาน (มีสอบ ร่วมกับงานกลุ่ม งานเดี่ยว หรือการบ้าน)</option>
-                <option value="work">เน้นเก็บคะแนนจากงาน/โปรเจกต์ (ไม่มีสอบหรือสอบน้อย)</option>
+                <option value="ALL">-- ไม่จำกัดรูปแบบ (แสดงทั้งหมด) --</option>
+                <option value="exam">เน้นการสอบข้อเขียนเป็นหลัก (Exam-heavy)</option>
+                <option value="hybrid">แบบผสมผสาน (มีการสอบร่วมกับงานกลุ่ม/เดี่ยว)</option>
+                <option value="work">เน้นเก็บคะแนนจากชิ้นงาน/โครงงาน (Project/Assignment)</option>
               </select>
             </div>
           </div>
 
           <div class="action-footer">
-            <button class="back-btn" onclick="goToStep(1)">⬅ ย้อนกลับไปแก้ไขรายวิชา</button>
-            <button class="next-btn" onclick="completeStep2()">คำนวณและดูแผนการเรียน ➔</button>
+            <button class="back-btn" onclick="goToStep(1)">⬅ ย้อนกลับไปแก้ไขผลการเรียน</button>
+            <button class="next-btn" onclick="completeStep2()">คำนวณและจัดตารางรายเทอม ➔</button>
           </div>
         </div>
       </div>
@@ -245,7 +259,7 @@
       <!-- Step 1.3 -->
       <div id="step-3" class="wizard-step">
         <div class="result-block">
-          <h2>ขั้นที่ 1.3: สรุปผลการเรียนและแผนแนะนำรายเทอมที่เหลือ</h2>
+          <h2>ขั้นตอนที่ 3: สรุปหน่วยกิตและแผนการลงทะเบียนเรียนรายเทอม</h2>
 
           <div class="dashboard">
             <div class="card">
@@ -262,19 +276,24 @@
               <p id="required-gpa-val">-</p>
               <small id="required-gpa-desc"></small>
             </div>
+            <div class="card" style="border-color: #d8b4fe; background: var(--accent-purple-soft);">
+              <h3>🎯 GPAX จำลองเมื่อจบการศึกษา</h3>
+              <p id="sim-final-gpax-val" style="color: var(--accent-purple);">0.00</p>
+              <small id="sim-final-gpax-desc" style="color: var(--accent-purple); font-weight: bold;">คำนวณจากเกรดที่วางแผนไว้</small>
+            </div>
           </div>
         </div>
 
         <div class="result-block">
-          <h3>📊 สรุปหน่วยกิตและจำนวนวิชาที่ยังคงเหลือในแต่ละหมวด</h3>
+          <h3>📊 ความคืบหน้าหน่วยกิตรายหมวดหมู่</h3>
+          <p style="font-size:0.86rem; color:var(--neutral-600); margin-top:2px;">* หน่วยกิตส่วนที่เกินในหมวด GE หรือวิชาเลือกสาขา จะถูกนำไปสะสมเข้าเป็น <b>วิชาเลือกเสรี</b> ให้อัตโนมัติ</p>
           <div id="category-remaining-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 10px;"></div>
         </div>
 
-        <!-- Accordions for Recommendations (4 หัวข้อใหญ่) -->
+        <!-- Accordions for Recommendations -->
         <div class="result-block">
-          <h3 style="margin-bottom: 12px;">🏆 คลังรายวิชาแนะนำ (คลิกเพื่อดูรายละเอียด)</h3>
+          <h3 style="margin-bottom: 12px;">🏆 คลังรายวิชาแนะนำตามความเหมาะสม (คลิกเพื่อดูรายละเอียด)</h3>
           
-          <!-- 1. Pure Math -->
           <div class="accordion-wrapper">
             <div class="accordion-header" onclick="toggleAccordion('acc-pure')">
               <span id="pure-header-title">📘 รายวิชาเลือก Pure Math</span>
@@ -285,7 +304,6 @@
             </div>
           </div>
 
-          <!-- 2. Applied Math -->
           <div class="accordion-wrapper">
             <div class="accordion-header" onclick="toggleAccordion('acc-applied')">
               <span id="applied-header-title">📙 รายวิชาเลือก Applied Math</span>
@@ -296,7 +314,6 @@
             </div>
           </div>
 
-          <!-- 3. English (ENG) -->
           <div class="accordion-wrapper">
             <div class="accordion-header" onclick="toggleAccordion('acc-eng')">
               <span id="eng-header-title">🇬🇧 หมวดวิชาภาษาอังกฤษ (ENG)</span>
@@ -307,10 +324,9 @@
             </div>
           </div>
 
-          <!-- 4. GE / เสรี -->
           <div class="accordion-wrapper">
             <div class="accordion-header" onclick="toggleAccordion('acc-extra')">
-              <span id="extra-header-title">📗 วิชาศึกษาทั่วไป (GE) / วิชาเลือกเสรี</span>
+              <span id="extra-header-title">📗 หมวดวิชาศึกษาทั่วไป (GE) และวิชาเลือกเสรี</span>
               <span>▼</span>
             </div>
             <div id="acc-extra" class="accordion-content">
@@ -320,13 +336,33 @@
         </div>
 
         <div class="result-block">
-          <h3>🗓️ แผนการลงทะเบียนเรียนแนะนำรายเทอมจนจบการศึกษา</h3>
-          <p style="font-size:0.9rem; color:#64748b; margin-bottom: 12px;">จัดลำดับวิชาเพื่อให้สามารถจบการศึกษาได้ภายใน 4 ปี และปลอดภัยจากเกณฑ์วิทยาทัณฑ์</p>
+          <h3>🗓️ แผนการลงทะเบียนเรียนแนะนำรายเทอมจนสำเร็จการศึกษา</h3>
+          <p style="font-size:0.9rem; color:var(--neutral-600); margin-bottom: 14px;">คุณสามารถปรับเลื่อนวิชา ระบุเกรดคาดการณ์ หรือเพิ่มวิชาเลือกลงแต่ละภาคการศึกษาได้ตามความต้องการ</p>
           <div id="remaining-terms-schedule"></div>
         </div>
 
         <div class="action-footer">
           <button class="back-btn" onclick="goToStep(2)">⬅ ย้อนกลับไปแก้ไขเป้าหมาย</button>
+          <button class="next-btn" onclick="completeStep3()">สร้างใบรายงานสรุปแผนการศึกษา (ขั้นตอนที่ 4) ➔</button>
+        </div>
+      </div>
+
+      <!-- Step 1.4: สรุปใบรายงานแผนการเรียน -->
+      <div id="step-4" class="wizard-step">
+        <div class="result-block">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h2>ขั้นตอนที่ 4: 📄 ใบรายงานสรุปแผนการศึกษาตลอดหลักสูตร</h2>
+              <p class="step-desc">รายงานสรุปแผนการลงทะเบียนและผลการเรียนจำลองตลอดหลักสูตร 128 หน่วยกิต</p>
+            </div>
+            <button onclick="window.print()" class="next-btn" style="background:var(--accent-blue);">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
+          </div>
+
+          <div id="plan-summary-report-container" style="margin-top: 16px;"></div>
+        </div>
+
+        <div class="action-footer">
+          <button class="back-btn" onclick="goToStep(3)">⬅ ย้อนกลับไปปรับแผนรายเทอม</button>
         </div>
       </div>
 
@@ -335,26 +371,26 @@
     <!-- SECTION 2: Course Reviews -->
     <section id="section-review" class="main-section">
       <div class="result-block">
-        <h2>ศูนย์รวมรีวิวรายวิชาภาคคณิตศาสตร์และวิชาอื่นๆ</h2>
+        <h2>ศูนย์รวมรีวิวรายวิชาภาคคณิตศาสตร์และวิชาศึกษาทั่วไป</h2>
 
-        <div class="review-toggle-box">
-          <button id="toggle-read-btn" class="toggle-btn active" onclick="switchReviewMode('read')">💬 ดูรีวิววิชาเรียน</button>
-          <button id="toggle-write-btn" class="toggle-btn" onclick="switchReviewMode('write')">✍️ เขียนรีวิววิชาลง Sheet</button>
+        <div class="review-toggle-box" style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button id="toggle-read-btn" class="main-tab-btn active" style="flex: 1;" onclick="switchReviewMode('read')">💬 ค้นหาและอ่านรีวิววิชาเรียน</button>
+          <button id="toggle-write-btn" class="main-tab-btn" style="flex: 1;" onclick="switchReviewMode('write')">✍️ ร่วมแบ่งปันประสบการณ์ / เขียนรีวิว</button>
         </div>
 
         <!-- Read Reviews -->
         <div id="review-read-section">
-          <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+          <div style="background: var(--neutral-50); padding: 16px; border-radius: 10px; border: 1px solid var(--neutral-200); margin-bottom: 18px;">
             <div class="add-course-grid">
               <div class="form-group" style="margin-bottom: 0;">
-                <label>📂 กรองตามหมวดวิชา:</label>
+                <label>📂 กรองตามหมวดหมู่:</label>
                 <select id="review-filter-cat" onchange="onReviewFilterCatChange()">
-                  <option value="ALL">-- แสดงทุกหมวด --</option>
+                  <option value="ALL">-- แสดงทุกหมวดวิชา --</option>
                   <option value="core">วิชาแกน</option>
                   <option value="mandatory">วิชาเฉพาะบังคับ</option>
                   <option value="pure">วิชาเลือก Pure Math</option>
                   <option value="applied">วิชาเลือก Applied Math</option>
-                  <option value="eng">หมวดภาษาอังกฤษ (ENG)</option>
+                  <option value="eng">หมวดวิชาภาษาอังกฤษ (ENG)</option>
                   <option value="ge">วิชาศึกษาทั่วไป (GE)</option>
                   <option value="free">วิชาเลือกเสรี</option>
                   <option value="land">ศาสตร์แห่งแผ่นดิน</option>
@@ -362,9 +398,9 @@
               </div>
 
               <div class="form-group" style="margin-bottom: 0;">
-                <label>🔍 กรองเฉพาะวิชา:</label>
+                <label>🔍 ค้นหารายวิชา:</label>
                 <select id="review-filter-course" onchange="renderReviews()">
-                  <option value="ALL">-- แสดงรีวิวทุกวิชา --</option>
+                  <option value="ALL">-- แสดงรีวิวทุกรายวิชา --</option>
                 </select>
               </div>
             </div>
@@ -379,7 +415,7 @@
         <!-- Write Review Form -->
         <div id="review-write-section" style="display: none;">
           <h3>✍️ ร่วมแบ่งปันประสบการณ์วิชาเรียน</h3>
-          <p class="step-desc">ข้อมูลรีวิวจะถูกบันทึกส่งตรงไปยัง Google Sheet ของระบบทันที</p>
+          <p class="step-desc">ข้อมูลรีวิวจะถูกบันทึกส่งตรงไปยัง Google Sheet ของระบบแบบ Real-time</p>
 
           <form id="review-form" onsubmit="submitReview(event)">
             <div class="form-group">
@@ -388,7 +424,7 @@
             </div>
 
             <!-- Other Course Fields for Review -->
-            <div id="other-course-fields" style="display:none; background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed #cbd5e1; margin-bottom:14px;">
+            <div id="other-course-fields" style="display:none; background:var(--neutral-50); padding:14px; border-radius:8px; border:1px dashed var(--neutral-300); margin-bottom:14px;">
               <div class="add-course-grid">
                 <div class="form-group">
                   <label>รหัสวิชา (8 หลัก):</label>
@@ -429,20 +465,19 @@
             </div>
 
             <div class="add-course-grid">
-              <!-- ช่องเลือกชั้นปีที่กำลังศึกษาอยู่ -->
               <div class="form-group">
-                <label>🎓 ชั้นปีที่กำลังศึกษาอยู่:</label>
+                <label>🎓 ชั้นปีที่ลงทะเบียนเรียนวิชานี้:</label>
                 <select id="review-user-year" required>
                   <option value="ปี 1">นิสิตชั้นปีที่ 1</option>
                   <option value="ปี 2">นิสิตชั้นปีที่ 2</option>
                   <option value="ปี 3">นิสิตชั้นปีที่ 3</option>
                   <option value="ปี 4">นิสิตชั้นปีที่ 4</option>
-                  <option value="ปี 5 ขึ้นไป">นิสิตชั้นปีที่ 5 ขึ้นไป / จบการศึกษาแล้ว</option>
+                  <option value="ปี 5 ขึ้นไป">นิสิตชั้นปีที่ 5 ขึ้นไป / สำเร็จการศึกษาแล้ว</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>🎯 เกรดที่คุณได้จริงในวิชานี้:</label>
+                <label>🎯 เกรดที่ได้รับจริง:</label>
                 <select id="review-grade-got">
                   <option value="A">A</option>
                   <option value="B+">B+</option>
@@ -451,7 +486,7 @@
                   <option value="C">C</option>
                   <option value="D+">D+</option>
                   <option value="D">D</option>
-                  <option value="P">P (ผ่าน)</option>
+                  <option value="P">P (ผ่าน / S)</option>
                 </select>
               </div>
 
@@ -459,33 +494,33 @@
                 <label>ระดับความยากของเนื้อหา:</label>
                 <select id="review-difficulty">
                   <option value="ง่าย">ง่าย (ทำความเข้าใจได้ไม่ยาก)</option>
-                  <option value="ปานกลาง" selected>ปานกลาง (กำลังดีตามมาตรฐาน)</option>
-                  <option value="ยาก">ยาก (ต้องทุ่มเทเวลาอ่านเยอะ)</option>
+                  <option value="ปานกลาง" selected>ปานกลาง (มาตรฐานทั่วไป)</option>
+                  <option value="ยาก">ยาก (ต้องทุ่มเทเวลาศึกษามาก)</option>
                 </select>
               </div>
 
               <div class="form-group">
                 <label>รูปแบบการเรียนการสอน:</label>
                 <select id="review-online-rating">
-                  <option value="onsite">Onsite ในห้องเรียน 100%</option>
-                  <option value="hybrid">Hybrid (มีทั้งในห้องและออนไลน์)</option>
-                  <option value="online">Online 100%</option>
+                  <option value="onsite">Onsite ในห้องเรียนปกติ</option>
+                  <option value="hybrid">Hybrid ผสมผสาน</option>
+                  <option value="online">Online ออนไลน์เต็มรูปแบบ</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>สัดส่วนคะแนนและการสอบ:</label>
+                <label>สัดส่วนการวัดผลคะแนน:</label>
                 <select id="review-exam-rating">
-                  <option value="exam">เน้นสอบเป็นหลัก (มิดเทอม / ไฟนอล)</option>
-                  <option value="hybrid">ผสมผสาน (มีสอบ ร่วมกับงานกลุ่ม งานเดี่ยว หรือการบ้าน)</option>
-                  <option value="work">เน้นเก็บคะแนนจากงาน/โปรเจกต์ (ไม่มีสอบหรือสอบน้อย)</option>
+                  <option value="exam">เน้นการสอบข้อเขียนเป็นหลัก</option>
+                  <option value="hybrid">ผสมผสาน (มีสอบและงานมอบหมาย)</option>
+                  <option value="work">เน้นเก็บคะแนนจากชิ้นงาน/โครงงาน</option>
                 </select>
               </div>
             </div>
 
             <div class="form-group">
-              <label>📅 ภาคการศึกษาที่เปิดสอน หรือ ภาคการศึกษาที่คุณลงเรียนจริง <span style="color: #dc2626;">* (จำเป็นต้องระบุอย่างน้อย 1 ภาค)</span>:</label>
-              <div style="display:flex; gap:16px; margin-top:6px; flex-wrap: wrap;">
+              <label>📅 ภาคการศึกษาที่เปิดสอนจริง <span style="color: var(--danger);">* (เลือกอย่างน้อย 1 ภาค)</span>:</label>
+              <div style="display:flex; gap:18px; margin-top:6px; flex-wrap: wrap;">
                 <label><input type="checkbox" name="offered_semesters" value="เทอม 1"> ภาคต้น (เทอม 1)</label>
                 <label><input type="checkbox" name="offered_semesters" value="เทอม 2"> ภาคปลาย (เทอม 2)</label>
                 <label><input type="checkbox" name="offered_semesters" value="Summer"> ภาคฤดูร้อน (Summer)</label>
@@ -493,11 +528,11 @@
             </div>
 
             <div class="form-group">
-              <label>ข้อความรีวิว แนะนำอาจารย์ หรือเทคนิคการเตรียมตัวสอบ <span style="color: #dc2626;">*</span>:</label>
-              <textarea id="review-comment" rows="4" placeholder="พิมพ์รีวิวของคุณที่นี่ เพื่อเป็นประโยชน์กับเพื่อนๆ และน้องๆ รุ่นต่อไป..." required></textarea>
+              <label>ข้อความรีวิว คำแนะนำอาจารย์ผู้สอน หรือแนวทางการเตรียมตัวสอบ <span style="color: var(--danger);">*</span>:</label>
+              <textarea id="review-comment" rows="4" placeholder="พิมพ์แบ่งปันประสบการณ์ของคุณ เพื่อเป็นประโยชน์ต่อเพื่อนๆ และรุ่นน้องต่อไป..." required></textarea>
             </div>
 
-            <button type="submit" class="next-btn" style="width: 100%; margin-top: 6px;">🚀 ส่งรีวิวเข้าสู่ Google Sheet</button>
+            <button type="submit" class="next-btn" style="width: 100%; margin-top: 6px;">🚀 บันทึกและส่งรีวิวเข้าสู่ Google Sheet</button>
           </form>
         </div>
       </div>
