@@ -16,16 +16,19 @@ const COURSE_DATABASE = [
   { id: "01417111", name: "แคลคูลัส I", credits: 3, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 1, type: "core" },
   { id: "01424111", name: "หลักชีววิทยา", credits: 3, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 1, type: "core", isFlexible: true },
   { id: "01424112", name: "ชีววิทยาภาคปฏิบัติการ", credits: 1, prereq: [], coreq: ["01424111"], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 1, type: "core", isFlexible: true },
+  // 🟢 ฟิสิกส์ 1 คู่กันในเทอม 1
   { id: "01420117", name: "ฟิสิกส์พื้นฐาน I", credits: 2, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 1, type: "core", isFlexible: true },
-  
+  { id: "01420113", name: "ปฏิบัติการฟิสิกส์ I", credits: 1, prereq: ["01420117"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 1, type: "core", isFlexible: true },
+
   { id: "01417112", name: "แคลคูลัส II", credits: 3, prereq: ["01417111"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 2, type: "core" },
+  // 🟢 ฟิสิกส์ 2 คู่กันในเทอม 2
   { id: "01420118", name: "ฟิสิกส์พื้นฐาน II", credits: 2, prereq: ["01420117"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 2, type: "core", isFlexible: true },
-  { id: "01420113", name: "ปฏิบัติการฟิสิกส์ I", credits: 1, prereq: [], coreq: ["01420117"], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 2, type: "core", isFlexible: true },
+  { id: "01420114", name: "ปฏิบัติการฟิสิกส์ II", credits: 1, prereq: ["01420118"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 2, type: "core", isFlexible: true },
   
   { id: "01417211", name: "แคลคูลัส III", credits: 3, prereq: ["01417112"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 3, type: "core" },
   { id: "01422111", name: "หลักสถิติ", credits: 3, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 3, type: "core" },
-  { id: "01420114", name: "ปฏิบัติการฟิสิกส์ II", credits: 1, prereq: [], coreq: ["01420118"], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 3, type: "core", isFlexible: true },
-
+  { id: "01417211", name: "แคลคูลัส III", credits: 3, prereq: ["01417112"], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 3, type: "core" },
+  { id: "01422111", name: "หลักสถิติ", credits: 3, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 3, type: "core" },
   { id: "01403111", name: "เคมีทั่วไป", credits: 3, prereq: [], coreq: [], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 4, type: "core", isFlexible: true },
   { id: "01403112", name: "ปฏิบัติการเคมีทั่วไป", credits: 1, prereq: [], coreq: ["01403111"], offered: [1, 2, 3], offeredStr: "เทอม 1, เทอม 2 & Summer", recSem: 4, type: "core", isFlexible: true },
 
@@ -613,6 +616,22 @@ function addCourseToList() {
   } else {
     targetId = document.getElementById("add-course-select").value;
     if (!targetId) return;
+// 🟢 ตรวจสอบว่ามีฟิสิกส์พื้นฐานก่อนลงแลปหรือไม่
+    if (targetId === "01420113") {
+      const isP1Passed = userGrades["01420117"] && (typeof userGrades["01420117"] === "object" ? userGrades["01420117"].grade !== "F" : userGrades["01420117"] !== "F");
+      if (!isP1Passed) {
+        alert("⚠️ ไม่สามารถบันทึก ปฏิบัติการฟิสิกส์ I ได้!\n\nคุณต้องลงเรียนและผ่านวิชา 01420117 ฟิสิกส์พื้นฐาน I ก่อนครับ");
+        return;
+      }
+    }
+
+    if (targetId === "01420114") {
+      const isP2Passed = userGrades["01420118"] && (typeof userGrades["01420118"] === "object" ? userGrades["01420118"].grade !== "F" : userGrades["01420118"] !== "F");
+      if (!isP2Passed) {
+        alert("⚠️ ไม่สามารถบันทึก ปฏิบัติการฟิสิกส์ II ได้!\n\nคุณต้องลงเรียนและผ่านวิชา 01420118 ฟิสิกส์พื้นฐาน II ก่อนครับ");
+        return;
+      }
+    }
 
     const missingPrereqs = checkUnpassedPrereqs(targetId);
     if (missingPrereqs.length > 0) {
@@ -1307,7 +1326,58 @@ function removeCustomCourseFromTerm(termKey, courseId) {
 function shiftFlexibleCourse(courseId, targetTermNum) {
   const targetTerm = parseInt(targetTermNum);
   if (!targetTerm) return;
+
+  const course = COURSE_DATABASE.find(c => c.id === courseId);
+  if (!course) return;
+
+  // 1. ปฏิบัติการฟิสิกส์ 1: ต้องอยู่ในเทอมที่มีฟิสิกส์พื้นฐาน 1 หรือหลังจากนั้นเท่านั้น
+  if (courseId === "01420113") {
+    const p1Term = courseShiftOverrides["01420117"] || 1;
+    if (targetTerm < p1Term) {
+      alert(`⚠️ โยกไม่ได้นะ! วิชา "01420113 ปฏิบัติการฟิสิกส์ I" ต้องลงเรียนพร้อมกับ หรือหลังจากวิชา "01420117 ฟิสิกส์พื้นฐาน I" (ซึ่งอยู่ในเทอมที่ ${p1Term}) ครับ`);
+      processRecommendations();
+      return;
+    }
+  }
+
+  // 2. ปฏิบัติการฟิสิกส์ 2: ต้องอยู่ในเทอมที่มีฟิสิกส์พื้นฐาน 2 หรือหลังจากนั้นเท่านั้น
+  if (courseId === "01420114") {
+    const p2Term = courseShiftOverrides["01420118"] || 2;
+    if (targetTerm < p2Term) {
+      alert(`⚠️ โยกไม่ได้นะ! วิชา "01420114 ปฏิบัติการฟิสิกส์ II" ต้องลงเรียนพร้อมกับ หรือหลังจากวิชา "01420118 ฟิสิกส์พื้นฐาน II" (ซึ่งอยู่ในเทอมที่ ${p2Term}) ครับ`);
+      processRecommendations();
+      return;
+    }
+  }
+
+  // 3. ฟิสิกส์พื้นฐาน 2: ต้องอยู่หลังฟิสิกส์ 1 เสมอ
+  if (courseId === "01420118") {
+    const p1Term = courseShiftOverrides["01420117"] || 1;
+    if (targetTerm <= p1Term) {
+      alert(`⚠️ โยกไม่ได้นะ! วิชา "01420118 ฟิสิกส์พื้นฐาน II" ต้องเรียนหลังจาก "01420117 ฟิสิกส์พื้นฐาน I" (ซึ่งอยู่ในเทอมที่ ${p1Term}) ครับ`);
+      processRecommendations();
+      return;
+    }
+  }
+
+  // บันทึกการโยกย้ายเทอม
   courseShiftOverrides[courseId] = targetTerm;
+
+  // ถ้าย้ายฟิสิกส์ 1 บรรยาย ให้ย้ายแลป 1 ตามไปคู่กันอัตโนมัติ
+  if (courseId === "01420117") {
+    courseShiftOverrides["01420113"] = targetTerm;
+    const currentP2Term = courseShiftOverrides["01420118"] || 2;
+    if (currentP2Term <= targetTerm) {
+      courseShiftOverrides["01420118"] = targetTerm + 1;
+      courseShiftOverrides["01420114"] = targetTerm + 1;
+    }
+  }
+
+  // ถ้าย้ายฟิสิกส์ 2 บรรยาย ให้ย้ายแลป 2 ตามไปคู่กันอัตโนมัติ
+  if (courseId === "01420118") {
+    courseShiftOverrides["01420114"] = targetTerm;
+  }
+
   processRecommendations();
 }
 
@@ -1547,9 +1617,12 @@ function renderRemainingTermsSchedule(startYear, startSem, targetAvg) {
 
       const isPrereqPassed = (!c.prereq || c.prereq.length === 0) || c.prereq.every(reqId => {
         const item = passedMap[reqId];
-        if (!item) return false;
-        const g = typeof item === "object" ? item.grade : item;
-        return g && g !== "F";
+        const g = item ? (typeof item === "object" ? item.grade : item) : null;
+        const isPassedPast = (g && g !== "F");
+        // อนุญาตให้ปฏิบัติการฟิสิกส์ลงในเทอมเดียวกับตัวบรรยายได้
+        const isCoreInSameTerm = (c.id === "01420113" && reqId === "01420117" && termCourses.some(tc => tc.id === reqId)) ||
+                                 (c.id === "01420114" && reqId === "01420118" && termCourses.some(tc => tc.id === reqId));
+        return isPassedPast || isCoreInSameTerm;
       });
 
       const isCoreqPassed = (!c.coreq || c.coreq.length === 0) || c.coreq.every(reqId => {
